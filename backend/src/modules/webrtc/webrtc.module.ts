@@ -1,0 +1,20 @@
+import { Module } from '@nestjs/common';
+import { WebRTCGateway } from './webrtc.gateway';
+import { WebRTCService } from './webrtc.service';
+import { JwtModule } from '@nestjs/jwt';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+
+@Module({
+  imports: [
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => ({
+        secret: configService.get<string>('JWT_SECRET'),
+      }),
+      inject: [ConfigService],
+    }),
+  ],
+  providers: [WebRTCGateway, WebRTCService],
+  exports: [WebRTCService],
+})
+export class WebRTCModule {}

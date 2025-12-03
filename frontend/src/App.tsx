@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { Toaster } from 'react-hot-toast';
-import type{ AppDispatch, RootState } from './store/store';
+import type { AppDispatch, RootState } from './store/store';
 import { loadUser } from './store/slices/authSlice';
 
 // Layout
@@ -14,6 +14,8 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import AdminPanel from './pages/AdminPanel';
+import MeetingRoom from './pages/MeetingRoom';
+import JoinMeeting from './pages/MeetingRoom/JoinMeeting';
 
 // Components
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -37,6 +39,7 @@ function App() {
     <BrowserRouter>
       <Toaster position="top-right" />
       <Routes>
+        {/* Public Routes with Layout */}
         <Route path="/" element={<Layout />}>
           <Route index element={<Home />} />
           <Route path="login" element={<Login />} />
@@ -60,6 +63,25 @@ function App() {
             }
           />
         </Route>
+
+
+        <Route
+          path="meeting/:roomId/join"
+          element={
+            <ProtectedRoute>
+              <JoinMeeting />
+            </ProtectedRoute>
+          }
+        />
+        
+        <Route
+          path="meeting/:roomId"
+          element={
+            <ProtectedRoute>
+              <MeetingRoom />
+            </ProtectedRoute>
+          }
+        />
       </Routes>
     </BrowserRouter>
   );

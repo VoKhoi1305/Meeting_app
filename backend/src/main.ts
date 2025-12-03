@@ -9,7 +9,9 @@ async function bootstrap() {
 
   // Enable CORS
   app.enableCors({
-    origin: configService.get('FRONTEND_URL') || 'http://localhost:5173',
+   // origin: configService.get('FRONTEND_URL') || 'http://localhost:5173' || 'https://khoiva.id.vn',
+    origin: true,
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
   });
 
@@ -25,7 +27,7 @@ async function bootstrap() {
   // Global prefix
   app.setGlobalPrefix('api');
 
-  const port = configService.get('PORT') || 3000;
+  const port = configService.get('PORT',) || 3000;
   await app.listen(port);
   
   console.log(`Server is running on: http://localhost:${port}`);

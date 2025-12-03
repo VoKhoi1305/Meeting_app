@@ -59,20 +59,17 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const { roomId } = data;
     client.join(roomId);
 
-    // Get other participants in the room
     const room = this.server.sockets.adapter.rooms.get(roomId);
     const participants = room
       ? Array.from(room).filter((socketId) => socketId !== client.id)
       : [];
 
-    // Send list of existing participants to new joiner
     client.emit('existing-participants', {
       participants: participants.map((socketId) => ({
         peerId: socketId,
       })),
     });
 
-    // Notify existing participants about new joiner
     client.to(roomId).emit('new-participant', {
       peerId: client.id,
     });
@@ -89,7 +86,6 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     this.logger.log(`Offer from ${client.id} to ${target}`);
 
-    // Forward offer to target peer
     this.server.to(target).emit('offer', {
       sender: client.id,
       offer,
@@ -105,7 +101,6 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     this.logger.log(`Answer from ${client.id} to ${target}`);
 
-    // Forward answer to target peer
     this.server.to(target).emit('answer', {
       sender: client.id,
       answer,
@@ -119,7 +114,6 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {
     const { target, candidate } = data;
 
-    // Forward ICE candidate to target peer
     this.server.to(target).emit('ice-candidate', {
       sender: client.id,
       candidate,
@@ -134,7 +128,6 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const { roomId } = data;
     client.leave(roomId);
 
-    // Notify others that this peer left
     client.to(roomId).emit('participant-left', {
       peerId: client.id,
     });

@@ -1,632 +1,3 @@
-// import { useEffect, useCallback } from 'react';
-// import { useDispatch, useSelector } from 'react-redux';
-// import type { RootState, AppDispatch } from '../store/store';
-// import {
-//   setLocalStream,
-//   setIsAudioEnabled,
-//   setIsVideoEnabled,
-//   setIsScreenSharing,
-//   setAudioDevices,
-//   setVideoDevices,
-// } from '../store/slices/mediaDevicesSlice';
-// import {
-//   getUserMedia,
-//   getDisplayMedia,
-//   getMediaDevices,
-//   stopMediaStream,
-//   toggleAudioTrack,
-//   toggleVideoTrack,
-// } from '../utils/webrtc-utils';
-// import toast from 'react-hot-toast';
-
-// export const useMediaStream = () => {
-//   const dispatch = useDispatch<AppDispatch>();
-//   const {
-//     localStream,
-//     isAudioEnabled,
-//     isVideoEnabled,
-//     isScreenSharing,
-//   } = useSelector((state: RootState) => state.mediaDevices);
-
-//   // Initialize media devices
-//   useEffect(() => {
-//     const loadDevices = async () => {
-//       const { audioDevices, videoDevices } = await getMediaDevices();
-//       dispatch(setAudioDevices(audioDevices));
-//       dispatch(setVideoDevices(videoDevices));
-//     };
-
-//     loadDevices();
-
-//     // Listen for device changes
-//     navigator.mediaDevices.addEventListener('devicechange', loadDevices);
-
-//     return () => {
-//       navigator.mediaDevices.removeEventListener('devicechange', loadDevices);
-//     };
-//   }, [dispatch]);
-
-//   // Start local stream
-//   const startLocalStream = useCallback(async () => {
-//     try {
-//       const stream = await getUserMedia();
-//       dispatch(setLocalStream(stream));
-//       dispatch(setIsAudioEnabled(true));
-//       dispatch(setIsVideoEnabled(true));
-//       return stream;
-//     } catch (error: any) {
-//       console.error('Error starting local stream:', error);
-//       toast.error('Failed to access camera/microphone');
-//       throw error;
-//     }
-//   }, [dispatch]);
-
-//   // Stop local stream
-//   const stopLocalStream = useCallback(() => {
-//     if (localStream) {
-//       stopMediaStream(localStream);
-//       dispatch(setLocalStream(null));
-//     }
-//   }, [localStream, dispatch]);
-
-//   // Toggle audio
-//   const toggleAudio = useCallback(() => {
-//     if (localStream) {
-//       const newState = !isAudioEnabled;
-//       toggleAudioTrack(localStream, newState);
-//       dispatch(setIsAudioEnabled(newState));
-//     }
-//   }, [localStream, isAudioEnabled, dispatch]);
-
-//   // Toggle video
-//   const toggleVideo = useCallback(() => {
-//     if (localStream) {
-//       const newState = !isVideoEnabled;
-//       toggleVideoTrack(localStream, newState);
-//       dispatch(setIsVideoEnabled(newState));
-//     }
-//   }, [localStream, isVideoEnabled, dispatch]);
-
-//   // Start screen share
-//   const startScreenShare = useCallback(async () => {
-//     try {
-//       const screenStream = await getDisplayMedia();
-
-//       // Stop current video track
-//       if (localStream) {
-//         localStream.getVideoTracks().forEach((track) => track.stop());
-//       }
-
-//       // Replace video track with screen share
-//       const screenTrack = screenStream.getVideoTracks()[0];
-
-//       // Handle when user stops sharing via browser UI
-//       screenTrack.onended = () => {
-//         stopScreenShare();
-//       };
-
-//       // Create new stream with audio from local + video from screen
-//       const audioTrack = localStream?.getAudioTracks()[0];
-//       const newStream = new MediaStream([
-//         screenTrack,
-//         ...(audioTrack ? [audioTrack] : []),
-//       ]);
-
-//       dispatch(setLocalStream(newStream));
-//       dispatch(setIsScreenSharing(true));
-//       toast.success('Screen sharing started');
-
-//       return newStream;
-//     } catch (error: any) {
-//       console.error('Error starting screen share:', error);
-//       if (error.name !== 'NotAllowedError') {
-//         toast.error('Failed to start screen sharing');
-//       }
-//       throw error;
-//     }
-//   }, [localStream, dispatch]);
-
-//   // Stop screen share
-//   const stopScreenShare = useCallback(async () => {
-//     try {
-//       // Restart camera
-//       const newStream = await getUserMedia();
-//       dispatch(setLocalStream(newStream));
-//       dispatch(setIsScreenSharing(false));
-//       toast.success('Screen sharing stopped');
-//       return newStream;
-//     } catch (error) {
-//       console.error('Error stopping screen share:', error);
-//       toast.error('Failed to restart camera');
-//       throw error;
-//     }
-//   }, [dispatch]);
-
-//   return {
-//     localStream,
-//     isAudioEnabled,
-//     isVideoEnabled,
-//     isScreenSharing,
-//     startLocalStream,
-//     stopLocalStream,
-//     toggleAudio,
-//     toggleVideo,
-//     startScreenShare,
-//     stopScreenShare,
-//   };
-// };
-
-// // src/hooks/useMediaStream.ts - FIXED VERSION
-// import { useEffect, useCallback, useRef } from 'react';
-// import { useDispatch, useSelector } from 'react-redux';
-// import type { RootState, AppDispatch } from '../store/store';
-// import {
-//   setLocalStream,
-//   setIsAudioEnabled,
-//   setIsVideoEnabled,
-//   setIsScreenSharing,
-//   setAudioDevices,
-//   setVideoDevices,
-// } from '../store/slices/mediaDevicesSlice';
-// import {
-//   getUserMedia,
-//   getDisplayMedia,
-//   getMediaDevices,
-//   stopMediaStream,
-//   toggleAudioTrack,
-//   toggleVideoTrack,
-// } from '../utils/webrtc-utils';
-// import toast from 'react-hot-toast';
-
-// export const useMediaStream = () => {
-//   const dispatch = useDispatch<AppDispatch>();
-//   const {
-//     localStream,
-//     isAudioEnabled,
-//     isVideoEnabled,
-//     isScreenSharing,
-//   } = useSelector((state: RootState) => state.mediaDevices);
-
-//   const isStartingRef = useRef(false);
-
-//   // Initialize media devices
-//   useEffect(() => {
-//     const loadDevices = async () => {
-//       const { audioDevices, videoDevices } = await getMediaDevices();
-//       dispatch(setAudioDevices(audioDevices));
-//       dispatch(setVideoDevices(videoDevices));
-//     };
-
-//     loadDevices();
-
-//     // Listen for device changes
-//     navigator.mediaDevices.addEventListener('devicechange', loadDevices);
-
-//     return () => {
-//       navigator.mediaDevices.removeEventListener('devicechange', loadDevices);
-//     };
-//   }, [dispatch]);
-
-//   // Start local stream
-//   const startLocalStream = useCallback(async () => {
-//     // Prevent multiple simultaneous starts
-//     if (isStartingRef.current) {
-//       console.log('⏳ Already starting stream...');
-//       return localStream;
-//     }
-
-//     if (localStream) {
-//       console.log('✅ Stream already exists');
-//       return localStream;
-//     }
-
-//     isStartingRef.current = true;
-//     console.log('📹 Starting local stream...');
-
-//     try {
-//       const stream = await getUserMedia();
-//       console.log('✅ Got media stream:', {
-//         audio: stream.getAudioTracks().length,
-//         video: stream.getVideoTracks().length,
-//       });
-
-//       dispatch(setLocalStream(stream));
-//       dispatch(setIsAudioEnabled(true));
-//       dispatch(setIsVideoEnabled(true));
-      
-//       return stream;
-//     } catch (error: any) {
-//       console.error('❌ Error starting local stream:', error);
-      
-//       // Better error messages
-//       if (error.name === 'NotAllowedError') {
-//         toast.error('Camera/microphone permission denied. Please allow access.');
-//       } else if (error.name === 'NotFoundError') {
-//         toast.error('No camera or microphone found');
-//       } else {
-//         toast.error('Failed to access camera/microphone');
-//       }
-      
-//       throw error;
-//     } finally {
-//       isStartingRef.current = false;
-//     }
-//   }, [localStream, dispatch]);
-
-//   // Stop local stream
-//   const stopLocalStream = useCallback(() => {
-//     console.log('🛑 Stopping local stream...');
-//     if (localStream) {
-//       stopMediaStream(localStream);
-//       dispatch(setLocalStream(null));
-//       console.log('✅ Stream stopped');
-//     }
-//   }, [localStream, dispatch]);
-
-//   // Toggle audio
-//   const toggleAudio = useCallback(() => {
-//     if (localStream) {
-//       const newState = !isAudioEnabled;
-//       console.log('🎤 Toggling audio:', newState);
-//       toggleAudioTrack(localStream, newState);
-//       dispatch(setIsAudioEnabled(newState));
-//     }
-//   }, [localStream, isAudioEnabled, dispatch]);
-
-//   // Toggle video
-//   const toggleVideo = useCallback(() => {
-//     if (localStream) {
-//       const newState = !isVideoEnabled;
-//       console.log('📹 Toggling video:', newState);
-//       toggleVideoTrack(localStream, newState);
-//       dispatch(setIsVideoEnabled(newState));
-//     }
-//   }, [localStream, isVideoEnabled, dispatch]);
-
-//   // Start screen share
-//   const startScreenShare = useCallback(async () => {
-//     if (!localStream) {
-//       console.error('❌ No local stream to share screen');
-//       return;
-//     }
-
-//     try {
-//       console.log('🖥️ Starting screen share...');
-//       const screenStream = await getDisplayMedia();
-
-//       // Stop current video track
-//       localStream.getVideoTracks().forEach((track) => {
-//         track.stop();
-//         localStream.removeTrack(track);
-//       });
-
-//       // Get screen track
-//       const screenTrack = screenStream.getVideoTracks()[0];
-
-//       // Handle when user stops sharing via browser UI
-//       screenTrack.onended = async () => {
-//         console.log('🖥️ Screen share ended by user');
-//         await stopScreenShare();
-//       };
-
-//       // Add screen track to local stream
-//       localStream.addTrack(screenTrack);
-
-//       dispatch(setIsScreenSharing(true));
-//       console.log('✅ Screen sharing started');
-//       toast.success('Screen sharing started');
-
-//       return localStream;
-//     } catch (error: any) {
-//       console.error('❌ Error starting screen share:', error);
-//       if (error.name !== 'NotAllowedError') {
-//         toast.error('Failed to start screen sharing');
-//       }
-//       throw error;
-//     }
-//   }, [localStream, dispatch]);
-
-//   // Stop screen share
-//   const stopScreenShare = useCallback(async () => {
-//     if (!localStream) return;
-
-//     try {
-//       console.log('🖥️ Stopping screen share...');
-      
-//       // Stop screen track
-//       localStream.getVideoTracks().forEach((track) => {
-//         track.stop();
-//         localStream.removeTrack(track);
-//       });
-
-//       // Restart camera
-//       const newStream = await getUserMedia();
-//       const videoTrack = newStream.getVideoTracks()[0];
-      
-//       if (videoTrack) {
-//         localStream.addTrack(videoTrack);
-//       }
-
-//       dispatch(setIsScreenSharing(false));
-//       console.log('✅ Screen share stopped, camera restarted');
-//       toast.success('Screen sharing stopped');
-      
-//       return localStream;
-//     } catch (error) {
-//       console.error('❌ Error stopping screen share:', error);
-//       toast.error('Failed to restart camera');
-//       throw error;
-//     }
-//   }, [localStream, dispatch]);
-
-//   return {
-//     localStream,
-//     isAudioEnabled,
-//     isVideoEnabled,
-//     isScreenSharing,
-//     startLocalStream,
-//     stopLocalStream,
-//     toggleAudio,
-//     toggleVideo,
-//     startScreenShare,
-//     stopScreenShare,
-//   };
-// };
-
-// import { useEffect, useCallback, useRef } from 'react';
-// import { useDispatch, useSelector } from 'react-redux';
-// import type { RootState, AppDispatch } from '../store/store';
-// import {
-//   setLocalStream,
-//   setIsAudioEnabled,
-//   setIsVideoEnabled,
-//   setIsScreenSharing,
-//   setAudioDevices,
-//   setVideoDevices,
-// } from '../store/slices/mediaDevicesSlice';
-// import {
-//   getUserMedia,
-//   getDisplayMedia,
-//   getMediaDevices,
-//   stopMediaStream,
-//   toggleAudioTrack,
-//   toggleVideoTrack,
-// } from '../utils/webrtc-utils';
-// import toast from 'react-hot-toast';
-
-// const serializeDevices = (devices: MediaDeviceInfo[]) => {
-//   return devices.map((device) => ({
-//     deviceId: device.deviceId,
-//     kind: device.kind,
-//     label: device.label,
-//     groupId: device.groupId,
-//   }));
-// };
-
-// export const useMediaStream = () => {
-//   const dispatch = useDispatch<AppDispatch>();
-//   const {
-//     localStream,
-//     isAudioEnabled,
-//     isVideoEnabled,
-//     isScreenSharing,
-//   } = useSelector((state: RootState) => state.mediaDevices);
-
-//   // Ref để ngăn chặn race condition khi khởi tạo stream (đặc biệt trong React Strict Mode)
-//   const isStartingRef = useRef(false);
-
-//   // --- 1. Load danh sách thiết bị (Mic/Cam) ---
-//   useEffect(() => {
-//     let mounted = true;
-
-//     const loadDevices = async () => {
-//       try {
-//         const { audioDevices, videoDevices } = await getMediaDevices();
-        
-//         if (mounted) {
-//           dispatch(setAudioDevices(serializeDevices(audioDevices)));
-//           dispatch(setVideoDevices(serializeDevices(videoDevices)));
-//         }
-//       } catch (error) {
-//         console.error('Failed to load media devices:', error);
-//       }
-//     };
-
-//     loadDevices();
-
-
-//     navigator.mediaDevices.addEventListener('devicechange', loadDevices);
-
-//     return () => {
-//       mounted = false;
-//       navigator.mediaDevices.removeEventListener('devicechange', loadDevices);
-//     };
-//   }, [dispatch]);
-
-
-//   const startLocalStream = useCallback(async () => {
-//     if (isStartingRef.current) {
-//       console.log('⏳ Stream is already starting...');
-//       return localStream;
-//     }
-
-   
-//     if (localStream && localStream.active) {
-//       console.log('✅ Active stream already exists');
-//       return localStream;
-//     }
-
-//     isStartingRef.current = true;
-//     console.log('📹 Starting new local stream...');
-
-//     try {
-//       const stream = await getUserMedia();
-      
-//       console.log('✅ Got media stream:', {
-//         id: stream.id,
-//         audio: stream.getAudioTracks().length,
-//         video: stream.getVideoTracks().length,
-//       });
-
-//       // Lưu ý: Việc lưu MediaStream (object phức tạp) vào Redux không được khuyến khích,
-//       // nhưng nếu app của bạn kiến trúc như vậy thì cứ giữ nguyên, chỉ cần đảm bảo devices được serialize.
-//       dispatch(setLocalStream(stream));
-//       dispatch(setIsAudioEnabled(true));
-//       dispatch(setIsVideoEnabled(true));
-      
-//       return stream;
-//     } catch (error: any) {
-//       console.error('❌ Error starting local stream:', error);
-      
-//       if (error.name === 'NotAllowedError') {
-//         toast.error('Vui lòng cấp quyền truy cập Camera và Micro.');
-//       } else if (error.name === 'NotFoundError') {
-//         toast.error('Không tìm thấy thiết bị Camera hoặc Micro.');
-//       } else {
-//         toast.error('Không thể truy cập thiết bị media.');
-//       }
-      
-//       throw error;
-//     } finally {
-//       isStartingRef.current = false;
-//     }
-//   }, [localStream, dispatch]);
-
-//   // --- 3. Dừng Local Stream ---
-//   const stopLocalStream = useCallback(() => {
-//     console.log('🛑 Stopping local stream request...');
-//     if (localStream) {
-//       stopMediaStream(localStream);
-//       dispatch(setLocalStream(null));
-//       // Reset trạng thái
-//       dispatch(setIsAudioEnabled(false));
-//       dispatch(setIsVideoEnabled(false));
-//       console.log('✅ Stream stopped and cleaned up');
-//     }
-//   }, [localStream, dispatch]);
-
-//   // --- 4. Bật/Tắt Mic ---
-//   const toggleAudio = useCallback(() => {
-//     if (localStream) {
-//       const newState = !isAudioEnabled;
-//       console.log('🎤 Toggling audio:', newState);
-//       toggleAudioTrack(localStream, newState);
-//       dispatch(setIsAudioEnabled(newState));
-//     }
-//   }, [localStream, isAudioEnabled, dispatch]);
-
-//   // --- 5. Bật/Tắt Camera ---
-//   const toggleVideo = useCallback(() => {
-//     if (localStream) {
-//       const newState = !isVideoEnabled;
-//       toggleVideoTrack(localStream, newState);
-//       dispatch(setIsVideoEnabled(newState));
-//     }
-//   }, [localStream, isVideoEnabled, dispatch]);
-
-//   // --- 6. Chia sẻ màn hình ---
-//   const startScreenShare = useCallback(async () => {
-//     // Cần phải có local stream trước để giữ Audio track
-//     if (!localStream) {
-//       console.error('No local stream to share screen (Need audio connection)');
-//       return;
-//     }
-
-//     try {
-//       console.log('🖥️ Starting screen share...');
-//       const screenStream = await getDisplayMedia();
-
-//       // Dừng video track của Camera hiện tại (để tiết kiệm băng thông và tắt đèn webcam nếu cần)
-//       localStream.getVideoTracks().forEach((track) => {
-//         track.stop();
-//         localStream.removeTrack(track);
-//       });
-
-//       // Lấy video track từ màn hình vừa share
-//       const screenTrack = screenStream.getVideoTracks()[0];
-
-//       // Xử lý khi người dùng ấn nút "Stop sharing" của trình duyệt
-//       screenTrack.onended = async () => {
-//         console.log('🖥️ Screen share ended by user via browser UI');
-//         await stopScreenShare();
-//       };
-
-//       localStream.addTrack(screenTrack);
-
-     
-//       const newStreamReference = new MediaStream(localStream.getTracks());
-      
-//       dispatch(setLocalStream(newStreamReference));
-//       dispatch(setIsScreenSharing(true));
-      
-//       console.log('✅ Screen sharing started');
-//       toast.success('Đang chia sẻ màn hình');
-
-//       return newStreamReference;
-//     } catch (error: any) {
-//       console.error('❌ Error starting screen share:', error);
-//       if (error.name !== 'NotAllowedError') {
-//         toast.error('Lỗi khi chia sẻ màn hình');
-//       }
-//     }
-//   }, [localStream, dispatch]);
-
-//   // --- 7. Dừng chia sẻ màn hình ---
-//   const stopScreenShare = useCallback(async () => {
-//     // Logic: Dừng track màn hình -> Bật lại Camera
-//     if (!localStream) return;
-
-//     try {
-//       console.log('🖥️ Stopping screen share, reverting to camera...');
-      
-//       // Dừng tất cả video tracks (là track màn hình)
-//       localStream.getVideoTracks().forEach((track) => {
-//         track.stop();
-//         localStream.removeTrack(track);
-//       });
-
-//       // Lấy lại stream Camera
-//       // Lưu ý: getUserMedia ở đây nên dùng lại config video mặc định
-//       const cameraStream = await getUserMedia(); 
-//       const videoTrack = cameraStream.getVideoTracks()[0];
-      
-//       if (videoTrack) {
-//         localStream.addTrack(videoTrack);
-//         // Tắt camera stream tạm vừa tạo để tránh memory leak (vì ta chỉ lấy track)
-//         // Tuy nhiên track đang chạy nên không được stop track, chỉ gán vào localStream
-//       }
-
-//       // Tạo reference mới để trigger UI update
-//       const restoredStream = new MediaStream(localStream.getTracks());
-
-//       dispatch(setLocalStream(restoredStream));
-//       dispatch(setIsScreenSharing(false));
-      
-//       console.log('✅ Reverted to camera');
-//       toast.success('Đã dừng chia sẻ màn hình');
-      
-//       return restoredStream;
-//     } catch (error) {
-//       console.error('❌ Error stopping screen share:', error);
-//       toast.error('Không thể bật lại camera');
-//     }
-//   }, [localStream, dispatch]);
-
-//   return {
-//     localStream,
-//     isAudioEnabled,
-//     isVideoEnabled,
-//     isScreenSharing,
-//     startLocalStream,
-//     stopLocalStream,
-//     toggleAudio,
-//     toggleVideo,
-//     startScreenShare,
-//     stopScreenShare,
-//   };
-// };
-
-// src/hooks/useMediaStream.ts - FINAL FIXED VERSION
 import { useEffect, useCallback, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { RootState, AppDispatch } from '../store/store';
@@ -763,186 +134,155 @@ export const useMediaStream = () => {
     }
   }, [localStream, isAudioEnabled, dispatch]);
 
-  // --- 5. Bật/Tắt Camera - FIXED VERSION ---
-  // const toggleVideo = useCallback(async () => {
-  //   if (!localStream) {
-  //     console.warn('⚠️ No stream to toggle video');
-  //     return;
-  //   }
 
-  //   const videoTracks = localStream.getVideoTracks();
+  // --- 5. Bật/Tắt Video ---
+//   const toggleVideo = useCallback(async () => {
+//   console.log('🎬 toggleVideo called');
+//   console.log('Current state:', { isVideoEnabled, hasStream: !!localStream });
+
+//   if (!localStream) {
+//     console.warn('⚠️ No stream to toggle video');
+//     return;
+//   }
+
+//   const videoTracks = localStream.getVideoTracks();
+//   console.log('Video tracks:', {
+//     count: videoTracks.length,
+//     tracks: videoTracks.map(t => ({
+//       id: t.id,
+//       label: t.label,
+//       enabled: t.enabled,
+//       readyState: t.readyState,
+//       muted: t.muted,
+//     }))
+//   });
+  
+//   if (isVideoEnabled) {
+
+//     console.log('📹 Turning OFF video');
+//     videoTracks.forEach((track) => {
+//       console.log(`Disabling track ${track.id}`);
+//       track.enabled = false;
+//     });
+//     dispatch(setIsVideoEnabled(false));
+
+//   } else {
+
     
-  //   if (isVideoEnabled) {
-  //     // ===== TURNING OFF VIDEO =====
-  //     console.log('📹 Turning OFF video');
-  //     videoTracks.forEach((track) => {
-  //       track.enabled = false;
-  //     });
-  //     dispatch(setIsVideoEnabled(false));
-  //   } else {
-  //     // ===== TURNING ON VIDEO =====
-  //     console.log('📹 Turning ON video');
+//     //const hasLiveTrack = videoTracks.some(track => track.readyState === 'live');
+//     const hasLiveTrack = videoTracks.some(track =>
+//     track.readyState === 'live' && track.kind === 'video');
+
+//     if (hasLiveTrack) {
+//       console.log('✅ Enabling existing video track');
+//       videoTracks.forEach((track) => {
+//         console.log(`Enabling track ${track.id}`);
+//         track.enabled = true;
+//       });
+//       dispatch(setIsVideoEnabled(true));
+//       console.log('✅ Video enabled (existing track)');
+//     } else {
+//       console.log('🔄 Video track is dead or missing, restarting camera...');
       
-  //     // Check if any track is still alive
-  //     const hasLiveTrack = videoTracks.some(track => track.readyState === 'live');
-      
-  //     if (hasLiveTrack) {
-  //       // Just enable existing track
-  //       console.log('✅ Enabling existing video track');
-  //       videoTracks.forEach((track) => {
-  //         track.enabled = true;
-  //       });
-  //       dispatch(setIsVideoEnabled(true));
-  //     } else {
-  //       // Track is dead or doesn't exist, need to get new track
-  //       console.log('🔄 Video track is dead, restarting camera...');
+//       try {
+//         // Get new video stream
+//         console.log('Requesting new video stream...');
+//         const newVideoStream = await navigator.mediaDevices.getUserMedia({
+//           video: {
+//             width: { ideal: 1280 },
+//             height: { ideal: 720 },
+//             frameRate: { ideal: 30 },
+//           },
+//         });
+//         console.log('✅ Got new video stream:', {
+//           id: newVideoStream.id,
+//           tracks: newVideoStream.getVideoTracks().length,
+//         });
+
+//         console.log('Removing old video tracks...');
+//         videoTracks.forEach((track) => {
+//           console.log(`Stopping and removing track ${track.id}`);
+//           track.stop();
+//           localStream.removeTrack(track);
+//         });
+
+//         // Add new video track
+//         const newVideoTrack = newVideoStream.getVideoTracks()[0];
+//         console.log('Adding new video track:', {
+//           id: newVideoTrack.id,
+//           label: newVideoTrack.label,
+//           readyState: newVideoTrack.readyState,
+//         });
+//         localStream.addTrack(newVideoTrack);
+
+    
+//         console.log('Creating new stream reference...');
+//         const updatedStream = new MediaStream(localStream.getTracks());
+//         console.log('New stream created:', {
+//           id: updatedStream.id,
+//           audioTracks: updatedStream.getAudioTracks().length,
+//           videoTracks: updatedStream.getVideoTracks().length,
+//         });
         
-  //       try {
-  //         // Get new video stream
-  //         const newVideoStream = await navigator.mediaDevices.getUserMedia({
-  //           video: {
-  //             width: { ideal: 1280 },
-  //             height: { ideal: 720 },
-  //             frameRate: { ideal: 30 },
-  //           },
-  //         });
+//         dispatch(setLocalStream(updatedStream));
+//         dispatch(setIsVideoEnabled(true));
+        
+//         console.log('✅ Video track restarted successfully');
+//         toast.success('Camera đã được bật lại');
+//       } catch (error: any) {
+//         console.error('❌ Failed to restart video:', error);
+//         console.error('Error details:', {
+//           name: error.name,
+//           message: error.message,
+//         });
+//         toast.error('Không thể bật camera');
+//       }
+//     }
+//   }
 
-  //         // Remove old video tracks
-  //         videoTracks.forEach((track) => {
-  //           track.stop();
-  //           localStream.removeTrack(track);
-  //         });
+//   console.log('🏁 toggleVideo completed');
+// }, [localStream, isVideoEnabled, dispatch]);
+const toggleVideo = useCallback(async () => {
+  if (!localStream) return;
 
-  //         // Add new video track
-  //         const newVideoTrack = newVideoStream.getVideoTracks()[0];
-  //         localStream.addTrack(newVideoTrack);
+  const videoTracks = localStream.getVideoTracks();
 
-  //         // Create new stream reference to trigger re-render
-  //         const updatedStream = new MediaStream(localStream.getTracks());
-          
-  //         dispatch(setLocalStream(updatedStream));
-  //         dispatch(setIsVideoEnabled(true));
-          
-  //         console.log('✅ Video track restarted successfully');
-  //         toast.success('Camera đã được bật lại');
-  //       } catch (error) {
-  //         console.error('❌ Failed to restart video:', error);
-  //         toast.error('Không thể bật camera');
-  //       }
-  //     }
-  //   }
-  // }, [localStream, isVideoEnabled, dispatch]);
+  if (isVideoEnabled) {
+    // TURN OFF VIDEO
+    videoTracks.forEach(track => {
+      track.stop();               // quan trọng
+      localStream.removeTrack(track);
+    });
 
-  const toggleVideo = useCallback(async () => {
-  console.log('🎬 toggleVideo called');
-  console.log('Current state:', { isVideoEnabled, hasStream: !!localStream });
-
-  if (!localStream) {
-    console.warn('⚠️ No stream to toggle video');
+    dispatch(setIsVideoEnabled(false));
     return;
   }
 
-  const videoTracks = localStream.getVideoTracks();
-  console.log('Video tracks:', {
-    count: videoTracks.length,
-    tracks: videoTracks.map(t => ({
-      id: t.id,
-      label: t.label,
-      enabled: t.enabled,
-      readyState: t.readyState,
-      muted: t.muted,
-    }))
-  });
-  
-  if (isVideoEnabled) {
-    // ===== TURNING OFF VIDEO =====
-    console.log('📹 Turning OFF video');
-    videoTracks.forEach((track) => {
-      console.log(`Disabling track ${track.id}`);
-      track.enabled = false;
-    });
-    dispatch(setIsVideoEnabled(false));
-    console.log('✅ Video disabled');
-  } else {
-    // ===== TURNING ON VIDEO =====
-    console.log('📹 Turning ON video');
-    
-    // Check if any track is still alive
-    const hasLiveTrack = videoTracks.some(track => track.readyState === 'live');
-    console.log('Has live track?', hasLiveTrack);
-    
-    if (hasLiveTrack) {
-      // Just enable existing track
-      console.log('✅ Enabling existing video track');
-      videoTracks.forEach((track) => {
-        console.log(`Enabling track ${track.id}`);
-        track.enabled = true;
-      });
-      dispatch(setIsVideoEnabled(true));
-      console.log('✅ Video enabled (existing track)');
-    } else {
-      // Track is dead or doesn't exist, need to get new track
-      console.log('🔄 Video track is dead or missing, restarting camera...');
-      
-      try {
-        // Get new video stream
-        console.log('Requesting new video stream...');
-        const newVideoStream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-            frameRate: { ideal: 30 },
-          },
-        });
-        console.log('✅ Got new video stream:', {
-          id: newVideoStream.id,
-          tracks: newVideoStream.getVideoTracks().length,
-        });
+  // TURN ON VIDEO
+  const activeTrack = videoTracks.find(t => t.readyState === "live");
 
-        // Remove old video tracks
-        console.log('Removing old video tracks...');
-        videoTracks.forEach((track) => {
-          console.log(`Stopping and removing track ${track.id}`);
-          track.stop();
-          localStream.removeTrack(track);
-        });
-
-        // Add new video track
-        const newVideoTrack = newVideoStream.getVideoTracks()[0];
-        console.log('Adding new video track:', {
-          id: newVideoTrack.id,
-          label: newVideoTrack.label,
-          readyState: newVideoTrack.readyState,
-        });
-        localStream.addTrack(newVideoTrack);
-
-        // Create new stream reference to trigger re-render
-        console.log('Creating new stream reference...');
-        const updatedStream = new MediaStream(localStream.getTracks());
-        console.log('New stream created:', {
-          id: updatedStream.id,
-          audioTracks: updatedStream.getAudioTracks().length,
-          videoTracks: updatedStream.getVideoTracks().length,
-        });
-        
-        dispatch(setLocalStream(updatedStream));
-        dispatch(setIsVideoEnabled(true));
-        
-        console.log('✅ Video track restarted successfully');
-        toast.success('Camera đã được bật lại');
-      } catch (error: any) {
-        console.error('❌ Failed to restart video:', error);
-        console.error('Error details:', {
-          name: error.name,
-          message: error.message,
-        });
-        toast.error('Không thể bật camera');
-      }
-    }
+  if (activeTrack) {
+    // Không còn dùng track.enabled nữa — track.stop mới là đúng
+    activeTrack.enabled = true;
+    dispatch(setIsVideoEnabled(true));
+    return;
   }
 
-  console.log('🏁 toggleVideo completed');
-}, [localStream, isVideoEnabled, dispatch]);
+  // NO LIVE TRACK → restart camera
+  try {
+    const newVideoStream = await navigator.mediaDevices.getUserMedia({ video: true });
+    const newTrack = newVideoStream.getVideoTracks()[0];
+
+    localStream.addTrack(newTrack);
+
+    const updated = new MediaStream(localStream.getTracks());
+    dispatch(setLocalStream(updated));
+    dispatch(setIsVideoEnabled(true));
+  } catch (err) {
+    console.error(err);
+    toast.error("Không thể bật lại camera");
+  }
+}, [localStream, isVideoEnabled]);
 
   // --- 6. Chia sẻ màn hình ---
   const startScreenShare = useCallback(async () => {
@@ -952,7 +292,6 @@ export const useMediaStream = () => {
     }
 
     try {
-      console.log('🖥️ Starting screen share...');
       const screenStream = await getDisplayMedia();
 
       // Dừng video track của Camera hiện tại
@@ -972,7 +311,6 @@ export const useMediaStream = () => {
 
       localStream.addTrack(screenTrack);
 
-      // Tạo reference mới để trigger UI update
       const newStreamReference = new MediaStream(localStream.getTracks());
       
       dispatch(setLocalStream(newStreamReference));

@@ -17,11 +17,7 @@ import { ParticipantStatus } from '../../common/enums/participant-status.enum';
 @WebSocketGateway({
   cors: {
    // origin: process.env.FRONTEND_URL || 'http://localhost:5173' || 'https://khoiva.id.vn',
-    origin: '*', // Dấu * nghĩa là cho phép tất cả mọi nơi kết nối
-    // Hoặc an toàn hơn:
-    // origin: [(origin) => {
-    //   return true; // Cho phép dynamic origin từ Cloudflare
-    // }],
+    origin: '*', 
     credentials: true,
   },
   namespace: 'meetings',

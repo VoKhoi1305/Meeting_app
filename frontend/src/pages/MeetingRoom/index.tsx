@@ -316,8 +316,8 @@ const MeetingRoom: React.FC = () => {
         joinRoom();
         hasJoinedRef.current = true;
         
-        console.log('✅ All steps completed!');
-        toast.success('Joined meeting successfully!');
+       // console.log('✅ All steps completed!');
+     //   toast.success('Joined meeting successfully!');
 
       } catch (error: any) {
         console.error('❌ Error in meeting initialization:', error);

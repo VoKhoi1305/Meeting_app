@@ -109,7 +109,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       // because the tracks inside may have changed
       videoElement.srcObject = stream;
 
-      // Force play in case it was paused
+      
       videoElement.play().catch((err) => {
         console.warn('Failed to play video:', err);
       });

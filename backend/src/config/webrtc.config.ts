@@ -8,11 +8,20 @@ export const webrtcConfig = {
     {
       urls: 'stun:stun1.l.google.com:19302',
     },
-    // Add TURN servers for production
-    // {
-    //   urls: 'turn:your-turn-server.com:3478',
-    //   username: 'username',
-    //   credential: 'password',
-    // },
+   {
+      urls: 'turn:openrelay.metered.ca:80',
+      username: 'openrelayproject',
+      credential: 'openrelayproject',
+    },
+    {
+      urls: 'turn:openrelay.metered.ca:443',
+      username: 'openrelayproject',
+      credential: 'openrelayproject',
+    },
+    {
+      urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+      username: 'openrelayproject',
+      credential: 'openrelayproject',
+    },
   ],
 };

@@ -1,13 +1,10 @@
-
-// src/hooks/useWebRTC.ts - FIXED WITH TRACK REPLACEMENT
 import { useEffect, useRef, useCallback } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch } from 'react-redux';
 import { Socket } from 'socket.io-client';
-import type { RootState, AppDispatch } from '../store/store';
+import type { AppDispatch } from '../store/store';
 import { setParticipantStream, updateParticipant } from '../store/slices/participantsSlice';
 import { createPeerConnection } from '../utils/webrtc-utils';
 import { WEBSOCKET_EVENTS } from '../constants/meeting.constants';
-import toast from 'react-hot-toast';
 
 interface PeerConnection {
   peerId: string;
@@ -21,24 +18,38 @@ export const useWebRTC = (
 ) => {
   const dispatch = useDispatch<AppDispatch>();
   const peerConnections = useRef<Map<string, PeerConnection>>(new Map());
+  
+  const localStreamRef = useRef<MediaStream | null>(null);
 
-  // Create peer connection for a specific peer
+  useEffect(() => {
+    localStreamRef.current = localStream;
+  }, [localStream]);
+
   const createPeerConnectionForPeer = useCallback(
     (peerId: string): RTCPeerConnection => {
+    
+      if (peerConnections.current.has(peerId)) {
+        return peerConnections.current.get(peerId)!.connection;
+      }
+
       const pc = createPeerConnection();
 
-      // Add local stream tracks
-      if (localStream) {
-        localStream.getTracks().forEach((track) => {
-          pc.addTrack(track, localStream);
+      // Thêm track từ stream hiện tại vào kết nối
+      const stream = localStreamRef.current;
+      if (stream) {
+        stream.getTracks().forEach((track) => {
+          pc.addTrack(track, stream);
         });
       }
+
       pc.ontrack = (event) => {
         const [remoteStream] = event.streams;
-        dispatch(setParticipantStream({ peerId, stream: remoteStream }));
+        if (remoteStream) {
+          console.log(`🎥 Nhận được video từ: ${peerId}`);
+          dispatch(setParticipantStream({ peerId, stream: remoteStream }));
+        }
       };
 
-      // Handle ICE candidates
       pc.onicecandidate = (event) => {
         if (event.candidate && webrtcSocket) {
           webrtcSocket.emit(WEBSOCKET_EVENTS.ICE_CANDIDATE, {
@@ -48,220 +59,150 @@ export const useWebRTC = (
         }
       };
 
+      // Theo dõi trạng thái kết nối
       pc.onconnectionstatechange = () => {
-        console.log(`Connection state with ${peerId}:`, pc.connectionState);
+        console.log(`🔌 Trạng thái kết nối ${peerId}:`, pc.connectionState);
+        let status = 'connecting';
+        if (pc.connectionState === 'connected') status = 'connected';
+        if (pc.connectionState === 'failed' || pc.connectionState === 'closed') status = 'disconnected';
         
-        if (pc.connectionState === 'connected') {
-          dispatch(
-            updateParticipant({
-              id: peerId,
-              updates: { connectionStatus: 'connected' },
-            })
-          );
-        } else if (
-          pc.connectionState === 'failed' ||
-          pc.connectionState === 'disconnected'
-        ) {
-          dispatch(
-            updateParticipant({
-              id: peerId,
-              updates: { connectionStatus: 'disconnected' },
-            })
-          );
-        }
+        dispatch(updateParticipant({
+          id: peerId,
+          updates: { connectionStatus: status as any },
+        }));
       };
 
       peerConnections.current.set(peerId, { peerId, connection: pc });
       return pc;
     },
-    [localStream, webrtcSocket, dispatch]
+    [webrtcSocket, dispatch]
   );
 
-  // Create and send offer
-  const createOffer = useCallback(
-    async (peerId: string) => {
-      try {
-        const pc = createPeerConnectionForPeer(peerId);
+  // --- Xử lý tín hiệu WebRTC ---
 
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
+  const handleNewParticipant = useCallback(({ peerId }: { peerId: string }) => {
+    console.log('🆕 Người mới vào, bắt đầu kết nối với:', peerId);
+    const pc = createPeerConnectionForPeer(peerId);
+    pc.createOffer()
+      .then((offer) => pc.setLocalDescription(offer))
+      .then(() => {
+        webrtcSocket?.emit(WEBSOCKET_EVENTS.OFFER, {
+          target: peerId,
+          offer: pc.localDescription,
+          roomId,
+        });
+      })
+      .catch((e) => console.error('Lỗi tạo Offer:', e));
+  }, [createPeerConnectionForPeer, roomId, webrtcSocket]);
 
-        if (webrtcSocket) {
-          webrtcSocket.emit(WEBSOCKET_EVENTS.OFFER, {
-            target: peerId,
-            offer: pc.localDescription,
-            roomId,
-          });
-        }
-
-        console.log('📤 Sent offer to', peerId);
-      } catch (error) {
-        console.error('Error creating offer:', error);
-        toast.error('Failed to establish connection');
+  const handleOffer = useCallback(async (data: { sender: string; offer: RTCSessionDescriptionInit }) => {
+    try {
+      const { sender, offer } = data;
+      console.log('📥 Nhận yêu cầu kết nối từ:', sender);
+      
+      // Khi nhận yêu cầu mới, reset kết nối cũ nếu có để tránh lỗi
+      if (peerConnections.current.has(sender)) {
+        peerConnections.current.get(sender)?.connection.close();
+        peerConnections.current.delete(sender);
       }
-    },
-    [webrtcSocket, roomId, createPeerConnectionForPeer]
-  );
+      
+      const pc = createPeerConnectionForPeer(sender);
+      await pc.setRemoteDescription(new RTCSessionDescription(offer));
+      
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
 
-  // Handle incoming offer
-  const handleOffer = useCallback(
-    async (data: { sender: string; offer: RTCSessionDescriptionInit }) => {
-      try {
-        const { sender, offer } = data;
-        console.log('📥 Received offer from', sender);
-
-        const pc = createPeerConnectionForPeer(sender);
-        await pc.setRemoteDescription(new RTCSessionDescription(offer));
-
-        const answer = await pc.createAnswer();
-        await pc.setLocalDescription(answer);
-
-        if (webrtcSocket) {
-          webrtcSocket.emit(WEBSOCKET_EVENTS.ANSWER, {
-            target: sender,
-            answer: pc.localDescription,
-          });
-        }
-
-        console.log('📤 Sent answer to', sender);
-      } catch (error) {
-        console.error('Error handling offer:', error);
-      }
-    },
-    [webrtcSocket, createPeerConnectionForPeer]
-  );
-
-  // Handle incoming answer
-  const handleAnswer = useCallback(
-    async (data: { sender: string; answer: RTCSessionDescriptionInit }) => {
-      try {
-        const { sender, answer } = data;
-        const peer = peerConnections.current.get(sender);
-        if (peer) {
-          await peer.connection.setRemoteDescription(new RTCSessionDescription(answer));
-        }
-      } catch (error) {
-        console.error('Error handling answer:', error);
-      }
-    },
-    []
-  );
-
-  const handleIceCandidate = useCallback(
-    async (data: { sender: string; candidate: RTCIceCandidateInit }) => {
-      try {
-        const { sender, candidate } = data;
-        const peer = peerConnections.current.get(sender);
-
-        if (peer && candidate) {
-          await peer.connection.addIceCandidate(new RTCIceCandidate(candidate));
-        }
-      } catch (error) {
-        console.error('Error handling ICE candidate:', error);
-      }
-    },
-    []
-  );
-
-
-  const handleNewParticipant = useCallback(
-    (data: { peerId: string }) => {
-      createOffer(data.peerId);
-    },
-    [createOffer]
-  );
-
-  const handleExistingParticipants = useCallback(
-    (data: { participants: { peerId: string }[] }) => {
-      data.participants.forEach((participant) => {
-        createOffer(participant.peerId);
+      webrtcSocket?.emit(WEBSOCKET_EVENTS.ANSWER, {
+        target: sender,
+        answer: pc.localDescription,
       });
-    },
-    [createOffer]
-  );
+    } catch (error) {
+      console.error('Lỗi xử lý Offer:', error);
+    }
+  }, [createPeerConnectionForPeer, webrtcSocket]);
 
-  const handleParticipantLeft = useCallback((data: { peerId: string }) => {
-    const peer = peerConnections.current.get(data.peerId);
-    if (peer) {
-      peer.connection.close();
-      peerConnections.current.delete(data.peerId);
+  const handleAnswer = useCallback(async (data: { sender: string; answer: RTCSessionDescriptionInit }) => {
+    try {
+      const pc = peerConnections.current.get(data.sender)?.connection;
+      if (pc) {
+        console.log('✅ Đã nhận chấp nhận kết nối từ:', data.sender);
+        await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+      }
+    } catch (error) {
+      console.error('Lỗi xử lý Answer:', error);
     }
   }, []);
 
-  useEffect(() => {
-    if (!localStream) {
-      return;
+  const handleIceCandidate = useCallback(async (data: { sender: string; candidate: RTCIceCandidateInit }) => {
+    try {
+      const pc = peerConnections.current.get(data.sender)?.connection;
+      if (pc) {
+        await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+      }
+    } catch (error) {
+      console.error('Lỗi xử lý ICE:', error);
     }
-    
-    peerConnections.current.forEach(({ connection, peerId }) => {
-      const senders = connection.getSenders();
-      
-      const audioTrack = localStream.getAudioTracks()[0];
-      const videoTrack = localStream.getVideoTracks()[0];
+  }, []);
 
-      senders.forEach((sender) => {
-        if (sender.track?.kind === 'audio' && audioTrack) {
-          if (sender.track.id !== audioTrack.id) {
-            sender.replaceTrack(audioTrack).catch((err) => {
-              console.error('Failed to replace audio track:', err);
-            });
-          }
-        } else if (sender.track?.kind === 'video' && videoTrack) {
-          if (sender.track.id !== videoTrack.id) {
-            sender.replaceTrack(videoTrack).catch((err) => {
-              console.error('Failed to replace video track:', err);
-            });
-          }
-        } else if (sender.track?.kind === 'video' && !videoTrack) {
-          sender.replaceTrack(null).catch((err) => {
-            console.error('Failed to remove video track:', err);
-          });
-        }
-      });
-    });
+  const handleParticipantLeft = useCallback(({ peerId }: { peerId: string }) => {
+    if (peerConnections.current.has(peerId)) {
+      peerConnections.current.get(peerId)?.connection.close();
+      peerConnections.current.delete(peerId);
+      dispatch(setParticipantStream({ peerId, stream: undefined as any }));
+    }
+  }, [dispatch]);
 
-    console.log('✅ All peer connections updated');
-  }, [localStream]);
-
-  // Setup WebRTC socket listeners
   useEffect(() => {
     if (!webrtcSocket || !roomId) return;
 
     webrtcSocket.emit(WEBSOCKET_EVENTS.JOIN_ROOM, { roomId });
 
+    webrtcSocket.on(WEBSOCKET_EVENTS.NEW_PARTICIPANT, handleNewParticipant);
     webrtcSocket.on(WEBSOCKET_EVENTS.OFFER, handleOffer);
     webrtcSocket.on(WEBSOCKET_EVENTS.ANSWER, handleAnswer);
     webrtcSocket.on(WEBSOCKET_EVENTS.ICE_CANDIDATE, handleIceCandidate);
-    webrtcSocket.on(WEBSOCKET_EVENTS.NEW_PARTICIPANT, handleNewParticipant);
-    webrtcSocket.on(WEBSOCKET_EVENTS.EXISTING_PARTICIPANTS, handleExistingParticipants);
     webrtcSocket.on(WEBSOCKET_EVENTS.PARTICIPANT_LEFT, handleParticipantLeft);
+    
+    webrtcSocket.on(WEBSOCKET_EVENTS.EXISTING_PARTICIPANTS, ({ participants }) => {
+      participants.forEach((p: any) => handleNewParticipant({ peerId: p.peerId }));
+    });
 
     return () => {
-      webrtcSocket.off(WEBSOCKET_EVENTS.OFFER, handleOffer);
-      webrtcSocket.off(WEBSOCKET_EVENTS.ANSWER, handleAnswer);
-      webrtcSocket.off(WEBSOCKET_EVENTS.ICE_CANDIDATE, handleIceCandidate);
-      webrtcSocket.off(WEBSOCKET_EVENTS.NEW_PARTICIPANT, handleNewParticipant);
-      webrtcSocket.off(WEBSOCKET_EVENTS.EXISTING_PARTICIPANTS, handleExistingParticipants);
-      webrtcSocket.off(WEBSOCKET_EVENTS.PARTICIPANT_LEFT, handleParticipantLeft);
-
-      // Close all peer connections
-      peerConnections.current.forEach(({ connection }) => {
-        connection.close();
-      });
+      webrtcSocket.off(WEBSOCKET_EVENTS.NEW_PARTICIPANT);
+      webrtcSocket.off(WEBSOCKET_EVENTS.OFFER);
+      webrtcSocket.off(WEBSOCKET_EVENTS.ANSWER);
+      webrtcSocket.off(WEBSOCKET_EVENTS.ICE_CANDIDATE);
+      webrtcSocket.off(WEBSOCKET_EVENTS.PARTICIPANT_LEFT);
+      webrtcSocket.off(WEBSOCKET_EVENTS.EXISTING_PARTICIPANTS);
+      
+      peerConnections.current.forEach((p) => p.connection.close());
       peerConnections.current.clear();
     };
-  }, [
-    webrtcSocket,
-    roomId,
-    handleOffer,
-    handleAnswer,
-    handleIceCandidate,
-    handleNewParticipant,
-    handleExistingParticipants,
-    handleParticipantLeft,
-  ]);
+  }, [webrtcSocket, roomId, handleNewParticipant, handleOffer, handleAnswer, handleIceCandidate, handleParticipantLeft]);
 
-  return {
-    peerConnections: peerConnections.current,
-  };
+  useEffect(() => {
+    if (!localStream) return;
+
+    peerConnections.current.forEach(({ connection }) => {
+      const senders = connection.getSenders();
+      const audioTrack = localStream.getAudioTracks()[0];
+      const videoTrack = localStream.getVideoTracks()[0];
+
+      if (senders.length === 0) {
+        localStream.getTracks().forEach((track) => connection.addTrack(track, localStream));
+        return;
+      }
+
+      senders.forEach((sender) => {
+        if (sender.track?.kind === 'audio' && audioTrack) {
+          sender.replaceTrack(audioTrack).catch(console.error);
+        }
+        if (sender.track?.kind === 'video' && videoTrack) {
+          sender.replaceTrack(videoTrack).catch(console.error);
+        }
+      });
+    });
+  }, [localStream]);
+
+  return { peerConnections: peerConnections.current };
 };

@@ -270,7 +270,7 @@ const MeetingControls: React.FC = () => {
           )}
         </button>
 
-        {/* Screen Share Toggle */}
+        
         <button
           onClick={handleToggleScreenShare}
           disabled={isTogglingScreen}

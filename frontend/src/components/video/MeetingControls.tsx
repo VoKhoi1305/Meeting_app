@@ -1,4 +1,4 @@
-// import React from 'react';
+// import React, { useState } from 'react';
 // import { useNavigate } from 'react-router-dom';
 // import { useDispatch, useSelector } from 'react-redux';
 // import type { RootState, AppDispatch } from '../../store/store';
@@ -13,6 +13,7 @@
 //   MonitorOff,
 //   PhoneOff,
 //   Settings,
+//   Loader2,
 // } from 'lucide-react';
 // import toast from 'react-hot-toast';
 
@@ -31,15 +32,26 @@
 //     stopScreenShare,
 //   } = useMediaStream();
 
+//   const [isTogglingVideo, setIsTogglingVideo] = useState(false);
+//   const [isTogglingScreen, setIsTogglingScreen] = useState(false);
+
 //   const handleToggleAudio = () => {
 //     toggleAudio();
 //   };
 
-//   const handleToggleVideo = () => {
-//     toggleVideo();
+//   const handleToggleVideo = async () => {
+//     setIsTogglingVideo(true);
+//     try {
+//       await toggleVideo();
+//     } catch (error) {
+//       console.error('Error toggling video:', error);
+//     } finally {
+//       setIsTogglingVideo(false);
+//     }
 //   };
 
 //   const handleToggleScreenShare = async () => {
+//     setIsTogglingScreen(true);
 //     try {
 //       if (isScreenSharing) {
 //         await stopScreenShare();
@@ -48,6 +60,8 @@
 //       }
 //     } catch (error) {
 //       console.error('Screen share error:', error);
+//     } finally {
+//       setIsTogglingScreen(false);
 //     }
 //   };
 
@@ -86,31 +100,37 @@
 //         {/* Video Toggle */}
 //         <button
 //           onClick={handleToggleVideo}
-//           className={`p-4 rounded-full transition-colors ${
+//           disabled={isTogglingVideo}
+//           className={`p-4 rounded-full transition-colors relative ${
 //             isVideoEnabled
 //               ? 'bg-gray-700 hover:bg-gray-600'
 //               : 'bg-red-600 hover:bg-red-700'
-//           }`}
+//           } ${isTogglingVideo ? 'opacity-50 cursor-not-allowed' : ''}`}
 //           title={isVideoEnabled ? 'Stop Video' : 'Start Video'}
 //         >
-//           {isVideoEnabled ? (
+//           {isTogglingVideo ? (
+//             <Loader2 className="text-white animate-spin" size={24} />
+//           ) : isVideoEnabled ? (
 //             <Video className="text-white" size={24} />
 //           ) : (
 //             <VideoOff className="text-white" size={24} />
 //           )}
 //         </button>
 
-//         {/* Screen Share Toggle */}
+        
 //         <button
 //           onClick={handleToggleScreenShare}
+//           disabled={isTogglingScreen}
 //           className={`p-4 rounded-full transition-colors ${
 //             isScreenSharing
 //               ? 'bg-blue-600 hover:bg-blue-700'
 //               : 'bg-gray-700 hover:bg-gray-600'
-//           }`}
+//           } ${isTogglingScreen ? 'opacity-50 cursor-not-allowed' : ''}`}
 //           title={isScreenSharing ? 'Stop Sharing' : 'Share Screen'}
 //         >
-//           {isScreenSharing ? (
+//           {isTogglingScreen ? (
+//             <Loader2 className="text-white animate-spin" size={24} />
+//           ) : isScreenSharing ? (
 //             <MonitorOff className="text-white" size={24} />
 //           ) : (
 //             <Monitor className="text-white" size={24} />
@@ -150,7 +170,6 @@
 
 // export default MeetingControls;
 
-// src/components/video/MeetingControls.tsx - IMPROVED
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
@@ -158,15 +177,7 @@ import type { RootState, AppDispatch } from '../../store/store';
 import { useMediaStream } from '../../hooks/useMediaStream';
 import { endMeeting } from '../../store/slices/meetingSlice';
 import {
-  Mic,
-  MicOff,
-  Video,
-  VideoOff,
-  Monitor,
-  MonitorOff,
-  PhoneOff,
-  Settings,
-  Loader2,
+  Mic, MicOff, Video, VideoOff, Monitor, MonitorOff, PhoneOff, Settings, Loader2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -178,24 +189,16 @@ const MeetingControls: React.FC = () => {
     (state: RootState) => state.mediaDevices
   );
 
-  const {
-    toggleAudio,
-    toggleVideo,
-    startScreenShare,
-    stopScreenShare,
-  } = useMediaStream();
+  // Chỉ cần gọi hàm phần cứng, state thay đổi sẽ trigger useMeeting gửi socket
+  const { toggleAudio, toggleVideo, startScreenShare, stopScreenShare } = useMediaStream();
 
   const [isTogglingVideo, setIsTogglingVideo] = useState(false);
   const [isTogglingScreen, setIsTogglingScreen] = useState(false);
 
-  const handleToggleAudio = () => {
-    toggleAudio();
-  };
-
   const handleToggleVideo = async () => {
     setIsTogglingVideo(true);
     try {
-      await toggleVideo();
+      await toggleVideo(); 
     } catch (error) {
       console.error('Error toggling video:', error);
     } finally {
@@ -224,30 +227,24 @@ const MeetingControls: React.FC = () => {
   };
 
   const handleEndMeeting = async () => {
-    if (meeting && window.confirm('Are you sure you want to end this meeting for everyone?')) {
+    if (meeting && window.confirm('End meeting for everyone?')) {
       await dispatch(endMeeting(meeting.id));
       navigate('/dashboard');
     }
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-gray-900 border-t border-gray-700 p-4">
+    <div className="fixed bottom-0 left-0 right-0 bg-gray-900 border-t border-gray-700 p-4 z-50">
       <div className="max-w-4xl mx-auto flex items-center justify-center gap-4">
         {/* Audio Toggle */}
         <button
-          onClick={handleToggleAudio}
+          onClick={toggleAudio}
           className={`p-4 rounded-full transition-colors ${
-            isAudioEnabled
-              ? 'bg-gray-700 hover:bg-gray-600'
-              : 'bg-red-600 hover:bg-red-700'
+            isAudioEnabled ? 'bg-gray-700 hover:bg-gray-600' : 'bg-red-600 hover:bg-red-700'
           }`}
           title={isAudioEnabled ? 'Mute' : 'Unmute'}
         >
-          {isAudioEnabled ? (
-            <Mic className="text-white" size={24} />
-          ) : (
-            <MicOff className="text-white" size={24} />
-          )}
+          {isAudioEnabled ? <Mic className="text-white" size={24} /> : <MicOff className="text-white" size={24} />}
         </button>
 
         {/* Video Toggle */}
@@ -255,10 +252,8 @@ const MeetingControls: React.FC = () => {
           onClick={handleToggleVideo}
           disabled={isTogglingVideo}
           className={`p-4 rounded-full transition-colors relative ${
-            isVideoEnabled
-              ? 'bg-gray-700 hover:bg-gray-600'
-              : 'bg-red-600 hover:bg-red-700'
-          } ${isTogglingVideo ? 'opacity-50 cursor-not-allowed' : ''}`}
+            isVideoEnabled ? 'bg-gray-700 hover:bg-gray-600' : 'bg-red-600 hover:bg-red-700'
+          } ${isTogglingVideo ? 'opacity-50' : ''}`}
           title={isVideoEnabled ? 'Stop Video' : 'Start Video'}
         >
           {isTogglingVideo ? (
@@ -270,16 +265,13 @@ const MeetingControls: React.FC = () => {
           )}
         </button>
 
-        
+        {/* Screen Share */}
         <button
           onClick={handleToggleScreenShare}
           disabled={isTogglingScreen}
           className={`p-4 rounded-full transition-colors ${
-            isScreenSharing
-              ? 'bg-blue-600 hover:bg-blue-700'
-              : 'bg-gray-700 hover:bg-gray-600'
-          } ${isTogglingScreen ? 'opacity-50 cursor-not-allowed' : ''}`}
-          title={isScreenSharing ? 'Stop Sharing' : 'Share Screen'}
+            isScreenSharing ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-700 hover:bg-gray-600'
+          }`}
         >
           {isTogglingScreen ? (
             <Loader2 className="text-white animate-spin" size={24} />
@@ -291,27 +283,18 @@ const MeetingControls: React.FC = () => {
         </button>
 
         {/* Settings */}
-        <button
-          className="p-4 rounded-full bg-gray-700 hover:bg-gray-600 transition-colors"
-          title="Settings"
-        >
+        <button className="p-4 rounded-full bg-gray-700 hover:bg-gray-600 transition-colors">
           <Settings className="text-white" size={24} />
         </button>
 
-        {/* Leave/End Meeting */}
+        {/* Leave/End */}
         {isHost ? (
-          <button
-            onClick={handleEndMeeting}
-            className="px-6 py-4 rounded-full bg-red-600 hover:bg-red-700 transition-colors flex items-center gap-2"
-          >
+          <button onClick={handleEndMeeting} className="px-6 py-4 rounded-full bg-red-600 hover:bg-red-700 flex gap-2">
             <PhoneOff className="text-white" size={24} />
-            <span className="text-white font-medium">End Meeting</span>
+            <span className="text-white font-medium">End</span>
           </button>
         ) : (
-          <button
-            onClick={handleLeaveMeeting}
-            className="px-6 py-4 rounded-full bg-red-600 hover:bg-red-700 transition-colors flex items-center gap-2"
-          >
+          <button onClick={handleLeaveMeeting} className="px-6 py-4 rounded-full bg-red-600 hover:bg-red-700 flex gap-2">
             <PhoneOff className="text-white" size={24} />
             <span className="text-white font-medium">Leave</span>
           </button>

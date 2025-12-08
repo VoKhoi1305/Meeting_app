@@ -4,18 +4,6 @@ export interface PeerConnection {
   stream?: MediaStream;
 }
 
-// export interface MediaDevicesState {
-//   audioDevices: MediaDeviceInfo[];
-//   videoDevices: MediaDeviceInfo[];
-//   selectedAudioDevice: string | null;
-//   selectedVideoDevice: string | null;
-//   localStream: MediaStream | null;
-//   isAudioEnabled: boolean;
-//   isVideoEnabled: boolean;
-//   isScreenSharing: boolean;
-// }
-
-// ✅ Thêm interface mới này vào file webrtc.types.ts
 export interface SerializableDeviceInfo {
   deviceId: string;
   kind: MediaDeviceKind | string;

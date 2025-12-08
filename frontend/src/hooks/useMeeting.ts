@@ -1,8 +1,7 @@
-
-import { useEffect, useCallback, useRef, useState } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import type { RootState, AppDispatch } from '../store/store';
+import type { AppDispatch, RootState } from '../store/store';
 import {
   setParticipants,
   addParticipant,
@@ -15,7 +14,6 @@ import { clearMeeting } from '../store/slices/meetingSlice';
 import { WEBSOCKET_EVENTS } from '../constants/meeting.constants';
 import websocketService from '../services/websocket.service';
 import toast from 'react-hot-toast';
-import { Socket } from 'socket.io-client'; // Import type Socket
 
 export const useMeeting = (
   roomId: string | null,
@@ -27,242 +25,154 @@ export const useMeeting = (
     (state: RootState) => state.mediaDevices
   );
   
-  // State để lưu socket instance, giúp trigger re-render khi socket kết nối thành công
-  const [socket, setSocket] = useState<Socket | null>(websocketService.getMeetingsSocket());
-  
-  // Track if we've joined to prevent multiple joins
+  // Ref để track trạng thái đã join chưa, tránh join đúp
   const hasJoinedRef = useRef(false);
 
-  // --- 1. Lắng nghe sự thay đổi của Socket Service ---
-  // Điều này đảm bảo khi websocketService kết nối xong, hook này sẽ nhận được socket mới
-  useEffect(() => {
-    const checkSocket = setInterval(() => {
-      const currentSocket = websocketService.getMeetingsSocket();
-      if (currentSocket && currentSocket.connected && currentSocket !== socket) {
-        console.log('🔌 Hook detected active socket');
-        setSocket(currentSocket);
-        clearInterval(checkSocket);
-      }
-    }, 500); // Kiểm tra mỗi 500ms
-
-    return () => clearInterval(checkSocket);
-  }, [socket]);
-
-
-  // --- 2. Hàm Join Room (Sửa logic lấy socket) ---
+  // --- 1. Join Room Logic ---
   const joinRoom = useCallback(() => {
-    // ⚠️ QUAN TRỌNG: Lấy socket trực tiếp từ Service tại thời điểm gọi hàm
-    // Để tránh trường hợp biến state 'socket' chưa kịp cập nhật
-    const activeSocket = websocketService.getMeetingsSocket();
+    const socket = websocketService.getMeetingsSocket();
 
-    if (!roomId || !participantId) {
-      console.warn('⚠️ Cannot join room: missing roomId/participantId');
+    // Nếu thiếu thông tin thì không làm gì
+    if (!roomId || !participantId || !socket) {
       return;
     }
 
-    if (!activeSocket || !activeSocket.connected) {
-      console.warn('⚠️ Socket not ready yet. Retrying in 1s...');
-      // Tự động thử lại sau 1 giây nếu socket chưa sẵn sàng
-      setTimeout(joinRoom, 1000);
+    // Nếu đã join rồi thì thôi
+    if (hasJoinedRef.current) return;
+
+    // QUAN TRỌNG: Nếu socket chưa kết nối, chờ sự kiện 'connect'
+    if (!socket.connected) {
+      console.log('⏳ Socket chưa sẵn sàng, đang chờ kết nối...');
+      const onConnect = () => {
+        console.log('✅ Socket đã kết nối! Đang tham gia phòng...');
+        socket.emit(WEBSOCKET_EVENTS.JOIN_ROOM, { roomId, participantId });
+        hasJoinedRef.current = true;
+        socket.off('connect', onConnect); // Xóa listener sau khi dùng
+      };
+      socket.on('connect', onConnect);
       return;
     }
 
-    if (hasJoinedRef.current) {
-      console.log('✅ Already joined room');
-      return;
-    }
-
-    console.log('🔌 Joining room:', { roomId, participantId });
-    
-    activeSocket.emit(WEBSOCKET_EVENTS.JOIN_ROOM, {
-      roomId,
-      participantId,
-    });
-    
+    // Nếu đã kết nối thì join luôn
+    console.log('🔌 Socket đã sẵn sàng. Tham gia phòng:', roomId);
+    socket.emit(WEBSOCKET_EVENTS.JOIN_ROOM, { roomId, participantId });
     hasJoinedRef.current = true;
-    // Cập nhật lại state socket nếu cần
-    setSocket(activeSocket);
+  }, [roomId, participantId]);
 
-  }, [roomId, participantId]); // Bỏ dependency 'socket' cũ đi
-
-  // --- 3. Các hàm khác dùng biến 'socket' từ state ---
-  // Leave meeting room
+  // --- 2. Leave Room Logic ---
   const leaveRoom = useCallback(() => {
-    const activeSocket = websocketService.getMeetingsSocket(); // Luôn lấy instance mới nhất
-    if (activeSocket && roomId && hasJoinedRef.current) {
-      console.log('👋 Leaving room:', roomId);
-      activeSocket.emit(WEBSOCKET_EVENTS.LEAVE_ROOM, { roomId });
+    const socket = websocketService.getMeetingsSocket();
+    if (socket && roomId) {
+      console.log('👋 Rời phòng:', roomId);
+      socket.emit(WEBSOCKET_EVENTS.LEAVE_ROOM, { roomId });
       hasJoinedRef.current = false;
+      dispatch(clearParticipants());
     }
-  }, [roomId]);
+  }, [roomId, dispatch]);
 
-  // Toggle audio
-  const toggleAudio = useCallback(
-    (enabled: boolean) => {
-      const activeSocket = websocketService.getMeetingsSocket();
-      if (activeSocket && roomId && participantId) {
-        activeSocket.emit(WEBSOCKET_EVENTS.TOGGLE_AUDIO, {
-          roomId,
-          participantId,
-          isEnabled: enabled,
-        });
-      }
-    },
-    [roomId, participantId]
-  );
+  // --- Actions ---
+  const toggleAudio = useCallback((enabled: boolean) => {
+    const socket = websocketService.getMeetingsSocket();
+    if (socket?.connected && roomId && participantId) {
+      socket.emit(WEBSOCKET_EVENTS.TOGGLE_AUDIO, { roomId, participantId, isEnabled: enabled });
+    }
+  }, [roomId, participantId]);
 
-  // Toggle video
-  const toggleVideo = useCallback(
-    (enabled: boolean) => {
-      const activeSocket = websocketService.getMeetingsSocket();
-      if (activeSocket && roomId && participantId) {
-        activeSocket.emit(WEBSOCKET_EVENTS.TOGGLE_VIDEO, {
-          roomId,
-          participantId,
-          isEnabled: enabled,
-        });
-      }
-    },
-    [roomId, participantId]
-  );
+  const toggleVideo = useCallback((enabled: boolean) => {
+    const socket = websocketService.getMeetingsSocket();
+    if (socket?.connected && roomId && participantId) {
+      socket.emit(WEBSOCKET_EVENTS.TOGGLE_VIDEO, { roomId, participantId, isEnabled: enabled });
+    }
+  }, [roomId, participantId]);
 
-  // Start screen share
   const startScreenShare = useCallback(() => {
-    const activeSocket = websocketService.getMeetingsSocket();
-    if (activeSocket && roomId && participantId) {
-      activeSocket.emit(WEBSOCKET_EVENTS.START_SCREEN_SHARE, {
-        roomId,
-        participantId,
-      });
+    const socket = websocketService.getMeetingsSocket();
+    if (socket?.connected && roomId && participantId) {
+      socket.emit(WEBSOCKET_EVENTS.START_SCREEN_SHARE, { roomId, participantId });
     }
   }, [roomId, participantId]);
 
-  // Stop screen share
   const stopScreenShare = useCallback(() => {
-    const activeSocket = websocketService.getMeetingsSocket();
-    if (activeSocket && roomId && participantId) {
-      activeSocket.emit(WEBSOCKET_EVENTS.STOP_SCREEN_SHARE, {
-        roomId,
-        participantId,
-      });
+    const socket = websocketService.getMeetingsSocket();
+    if (socket?.connected && roomId && participantId) {
+      socket.emit(WEBSOCKET_EVENTS.STOP_SCREEN_SHARE, { roomId, participantId });
     }
   }, [roomId, participantId]);
 
-  // --- Event Handlers ---
-  const handleUserJoined = useCallback(
-    (data: { participant: any }) => {
-      console.log('👤 User joined:', data.participant.displayName);
-      dispatch(addParticipant(data.participant));
-      toast.success(`${data.participant.displayName} joined`);
-    },
-    [dispatch]
-  );
-
-  const handleUserLeft = useCallback(
-    (data: { participantId: string }) => {
-      console.log('👋 User left:', data.participantId);
-      dispatch(removeParticipant(data.participantId));
-    },
-    [dispatch]
-  );
-
-  const handleParticipantUpdated = useCallback(
-    (data: { participantId: string; updates: any }) => {
-      console.log('🔄 Participant updated:', data);
-      dispatch(
-        updateParticipant({
-          id: data.participantId,
-          updates: data.updates,
-        })
-      );
-    },
-    [dispatch]
-  );
-
-  const handleParticipantsList = useCallback(
-    (data: { participants: any[] }) => {
-      console.log('📋 Participants list received:', data.participants.length);
-      dispatch(setParticipants(data.participants));
-
-      const localPart = data.participants.find((p) => p.id === participantId);
-      if (localPart) {
-        console.log('👤 Setting local participant:', localPart.displayName);
-        dispatch(setLocalParticipant(localPart));
-      } else {
-        console.warn('⚠️ Local participant not found in list');
-      }
-    },
-    [dispatch, participantId]
-  );
-
-  const handleMeetingEnded = useCallback(() => {
-    console.log('🛑 Meeting ended');
-    toast.error('Meeting has ended');
-    dispatch(clearParticipants());
-    dispatch(clearMeeting());
-    hasJoinedRef.current = false;
-    navigate('/dashboard');
-  }, [dispatch, navigate]);
-
-  // Sync local state with server
-  const syncTimeoutRef = useRef<number | undefined>(undefined);
-
+  // Sync state changes (Chỉ gửi khi đã join)
   useEffect(() => {
-    if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
-    syncTimeoutRef.current = window.setTimeout(() => {
-      if (hasJoinedRef.current) toggleAudio(isAudioEnabled);
-    }, 300);
-    return () => clearTimeout(syncTimeoutRef.current);
+    if (hasJoinedRef.current) toggleAudio(isAudioEnabled);
   }, [isAudioEnabled, toggleAudio]);
 
   useEffect(() => {
-    if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
-    syncTimeoutRef.current = window.setTimeout(() => {
-      if (hasJoinedRef.current) toggleVideo(isVideoEnabled);
-    }, 300);
-    return () => clearTimeout(syncTimeoutRef.current);
+    if (hasJoinedRef.current) toggleVideo(isVideoEnabled);
   }, [isVideoEnabled, toggleVideo]);
 
   useEffect(() => {
     if (hasJoinedRef.current) {
-      if (isScreenSharing) startScreenShare();
-      else stopScreenShare();
+      isScreenSharing ? startScreenShare() : stopScreenShare();
     }
   }, [isScreenSharing, startScreenShare, stopScreenShare]);
 
-  // --- Setup Socket Listeners ---
+  // --- 3. Socket Listeners ---
   useEffect(() => {
-    // Lấy socket hiện tại (có thể là null hoặc active)
-    const currentSocket = socket || websocketService.getMeetingsSocket();
+    const socket = websocketService.getMeetingsSocket();
+    if (!socket) return;
 
-    if (!currentSocket) {
-      return;
-    }
+    const handleUserJoined = (data: { participant: any }) => {
+      console.log('➕ Người dùng mới:', data.participant.displayName);
+      dispatch(addParticipant(data.participant));
+      toast.success(`${data.participant.displayName} đã tham gia`);
+    };
 
-    console.log('🔌 Setting up meeting socket listeners');
+    const handleUserLeft = (data: { participantId: string }) => {
+      console.log('➖ Người dùng rời đi:', data.participantId);
+      dispatch(removeParticipant(data.participantId));
+    };
 
-    currentSocket.on(WEBSOCKET_EVENTS.USER_JOINED, handleUserJoined);
-    currentSocket.on(WEBSOCKET_EVENTS.USER_LEFT, handleUserLeft);
-    currentSocket.on(WEBSOCKET_EVENTS.PARTICIPANT_UPDATED, handleParticipantUpdated);
-    currentSocket.on(WEBSOCKET_EVENTS.PARTICIPANTS_LIST, handleParticipantsList);
-    currentSocket.on(WEBSOCKET_EVENTS.MEETING_ENDED, handleMeetingEnded);
+    const handleParticipantUpdated = (data: { participantId: string; updates: any }) => {
+      dispatch(updateParticipant({ id: data.participantId, updates: data.updates }));
+    };
+
+    const handleParticipantsList = (data: { participants: any[] }) => {
+      console.log('📋 Danh sách người tham gia:', data.participants.length);
+      dispatch(setParticipants(data.participants));
+      
+      if (participantId) {
+        const local = data.participants.find((p) => p.id === participantId);
+        if (local) dispatch(setLocalParticipant(local));
+      }
+    };
+
+    const handleMeetingEnded = () => {
+      toast.error('Cuộc họp đã kết thúc');
+      dispatch(clearParticipants());
+      dispatch(clearMeeting());
+      hasJoinedRef.current = false;
+      navigate('/dashboard');
+    };
+
+    // Cleanup cũ & Đăng ký mới
+    socket.off(WEBSOCKET_EVENTS.USER_JOINED);
+    socket.off(WEBSOCKET_EVENTS.USER_LEFT);
+    socket.off(WEBSOCKET_EVENTS.PARTICIPANT_UPDATED);
+    socket.off(WEBSOCKET_EVENTS.PARTICIPANTS_LIST);
+    socket.off(WEBSOCKET_EVENTS.MEETING_ENDED);
+
+    socket.on(WEBSOCKET_EVENTS.USER_JOINED, handleUserJoined);
+    socket.on(WEBSOCKET_EVENTS.USER_LEFT, handleUserLeft);
+    socket.on(WEBSOCKET_EVENTS.PARTICIPANT_UPDATED, handleParticipantUpdated);
+    socket.on(WEBSOCKET_EVENTS.PARTICIPANTS_LIST, handleParticipantsList);
+    socket.on(WEBSOCKET_EVENTS.MEETING_ENDED, handleMeetingEnded);
 
     return () => {
-      console.log('🧹 Cleaning up meeting socket listeners');
-      currentSocket.off(WEBSOCKET_EVENTS.USER_JOINED, handleUserJoined);
-      currentSocket.off(WEBSOCKET_EVENTS.USER_LEFT, handleUserLeft);
-      currentSocket.off(WEBSOCKET_EVENTS.PARTICIPANT_UPDATED, handleParticipantUpdated);
-      currentSocket.off(WEBSOCKET_EVENTS.PARTICIPANTS_LIST, handleParticipantsList);
-      currentSocket.off(WEBSOCKET_EVENTS.MEETING_ENDED, handleMeetingEnded);
+      socket.off(WEBSOCKET_EVENTS.USER_JOINED);
+      socket.off(WEBSOCKET_EVENTS.USER_LEFT);
+      socket.off(WEBSOCKET_EVENTS.PARTICIPANT_UPDATED);
+      socket.off(WEBSOCKET_EVENTS.PARTICIPANTS_LIST);
+      socket.off(WEBSOCKET_EVENTS.MEETING_ENDED);
     };
-  }, [
-    socket, // Re-run effect khi socket thay đổi
-    handleUserJoined,
-    handleUserLeft,
-    handleParticipantUpdated,
-    handleParticipantsList,
-    handleMeetingEnded,
-  ]);
+  }, [dispatch, navigate, participantId]); 
 
   // Cleanup on unmount
   useEffect(() => {
@@ -271,8 +181,5 @@ export const useMeeting = (
     };
   }, []);
 
-  return {
-    joinRoom,
-    leaveRoom,
-  };
+  return { joinRoom, leaveRoom };
 };

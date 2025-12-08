@@ -1,76 +1,3 @@
-// import React, { useEffect, useRef } from 'react';
-// import { Mic, MicOff, Video as VideoIcon, VideoOff, User } from 'lucide-react';
-
-// interface VideoPlayerProps {
-//   stream?: MediaStream;
-//   displayName: string;
-//   isAudioEnabled: boolean;
-//   isVideoEnabled: boolean;
-//   isMirrored?: boolean;
-//   isLocal?: boolean;
-// }
-
-// const VideoPlayer: React.FC<VideoPlayerProps> = ({
-//   stream,
-//   displayName,
-//   isAudioEnabled,
-//   isVideoEnabled,
-//   isMirrored = false,
-//   isLocal = false,
-// }) => {
-//   const videoRef = useRef<HTMLVideoElement>(null);
-
-//   useEffect(() => {
-//     if (videoRef.current && stream) {
-//       videoRef.current.srcObject = stream;
-//     }
-//   }, [stream]);
-
-//   return (
-//     <div className="relative w-full h-full bg-gray-900 rounded-lg overflow-hidden">
-//       {/* Video element */}
-//       {isVideoEnabled && stream ? (
-//         <video
-//           ref={videoRef}
-//           autoPlay
-//           playsInline
-//           muted={isLocal}
-//           className={`w-full h-full object-cover ${isMirrored ? 'scale-x-[-1]' : ''}`}
-//         />
-//       ) : (
-//         <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-600 to-purple-600">
-//           <User size={64} className="text-white" />
-//         </div>
-//       )}
-
-//       {/* Overlay */}
-//       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-
-//       {/* Display name */}
-//       <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/70 rounded text-white text-sm font-medium">
-//         {displayName} {isLocal && '(You)'}
-//       </div>
-
-//       {/* Status indicators */}
-//       <div className="absolute top-2 right-2 flex gap-1">
-//         {!isAudioEnabled && (
-//           <div className="p-1 bg-red-600 rounded-full">
-//             <MicOff size={16} className="text-white" />
-//           </div>
-//         )}
-//         {!isVideoEnabled && (
-//           <div className="p-1 bg-red-600 rounded-full">
-//             <VideoOff size={16} className="text-white" />
-//           </div>
-//         )}
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default VideoPlayer;
-
-// src/components/video/VideoPlayer.tsx - FIXED
 import React, { useEffect, useRef } from 'react';
 import { Mic, MicOff, Video as VideoIcon, VideoOff, User } from 'lucide-react';
 
@@ -93,109 +20,63 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // CRITICAL FIX: Update video element whenever stream changes
-  // useEffect(() => {
-  //   const videoElement = videoRef.current;
-  //   if (!videoElement) return;
-
-  //   if (stream) {
-  //     console.log(`🎥 Attaching stream to video element for ${displayName}`, {
-  //       streamId: stream.id,
-  //       tracks: stream.getTracks().length,
-  //       videoTracks: stream.getVideoTracks().length,
-  //     });
-
-  //     // Always set srcObject, even if it's the "same" stream object
-  //     // because the tracks inside may have changed
-  //     videoElement.srcObject = stream;
-
-      
-  //     videoElement.play().catch((err) => {
-  //       console.warn('Failed to play video:', err);
-  //     });
-  //   } else {
-  //     console.log(`🎥 Removing stream from video element for ${displayName}`);
-  //     videoElement.srcObject = null;
-  //   }
-  // }, [stream, displayName]);
   useEffect(() => {
-  const videoElement = videoRef.current;
-  if (!videoElement) return;
+    const videoElement = videoRef.current;
+    if (!videoElement) return;
 
-  if (stream) {
-    videoElement.srcObject = stream;
-    // THÊM DÒNG NÀY ĐỂ DEBUG
-    console.log(`▶️ VideoPlayer playing stream: ${stream.id}, Tracks: ${stream.getTracks().length}`);
-    
-    // Ép chạy video
-    videoElement.onloadedmetadata = () => {
-        videoElement.play().catch(e => console.error("Play error:", e));
-    };
-  } else {
-    videoElement.srcObject = null;
-  }
-}, [stream, displayName]);
-
-  // Additional effect to handle track changes
-  useEffect(() => {
-    if (!stream) return;
-
-    const handleTrackChange = () => {
-      console.log(`🔄 Track changed for ${displayName}`);
-      // Force video element to refresh
-      if (videoRef.current) {
-        const currentSrc = videoRef.current.srcObject;
-        videoRef.current.srcObject = null;
-        videoRef.current.srcObject = currentSrc;
-      }
-    };
-
-    // Listen for track events
-    stream.getTracks().forEach((track) => {
-      track.addEventListener('ended', handleTrackChange);
-    });
-
-    return () => {
-      stream.getTracks().forEach((track) => {
-        track.removeEventListener('ended', handleTrackChange);
+    if (stream) {
+      videoElement.srcObject = stream;
+      // FIX: Bắt lỗi AbortError
+      videoElement.play().catch((err) => {
+        if (err.name !== 'AbortError') {
+            console.warn('Video play failed:', err);
+        }
       });
-    };
-  }, [stream, displayName]);
+    } else {
+      videoElement.srcObject = null;
+    }
+  }, [stream]);
+
+  // Kiểm tra có track video thực sự không
+  const hasVideoTrack = stream && stream.getVideoTracks().length > 0;
+  // Chỉ hiện video nếu: Người dùng bật cam VÀ Stream có track video
+  const shouldShowVideo = isVideoEnabled && hasVideoTrack;
 
   return (
-    <div className="relative w-full h-full bg-gray-900 rounded-lg overflow-hidden">
-      {/* Video element */}
-      {isVideoEnabled && stream && stream.getVideoTracks().length > 0 ? (
+    <div className="relative w-full h-full bg-gray-900 rounded-lg overflow-hidden border border-gray-800">
+      {shouldShowVideo ? (
         <video
           ref={videoRef}
           autoPlay
           playsInline
-          muted={isLocal}
+          muted={isLocal} // Quan trọng: Mute local để tránh hú
           className={`w-full h-full object-cover ${isMirrored ? 'scale-x-[-1]' : ''}`}
         />
       ) : (
-        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-600 to-purple-600">
-          <User size={64} className="text-white" />
+        // Avatar view
+        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900">
+          <div className="w-24 h-24 rounded-full bg-blue-600 flex items-center justify-center">
+             <span className="text-3xl font-bold text-white uppercase">
+                {displayName?.charAt(0) || <User size={40} />}
+             </span>
+          </div>
         </div>
       )}
 
-      {/* Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-
-      {/* Display name */}
-      <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/70 rounded text-white text-sm font-medium">
+      {/* Overlay Tên */}
+      <div className="absolute bottom-3 left-3 px-3 py-1 bg-black/60 rounded-full text-white text-sm font-medium backdrop-blur-sm">
         {displayName} {isLocal && '(You)'}
       </div>
 
-      {/* Status indicators */}
-      <div className="absolute top-2 right-2 flex gap-1">
+      {/* Status Icons */}
+      <div className="absolute top-3 right-3 flex gap-2">
         {!isAudioEnabled && (
-          <div className="p-1 bg-red-600 rounded-full">
+          <div className="p-1.5 bg-red-500/90 rounded-full backdrop-blur-sm">
             <MicOff size={16} className="text-white" />
           </div>
         )}
         {!isVideoEnabled && (
-          <div className="p-1 bg-red-600 rounded-full">
+          <div className="p-1.5 bg-red-500/90 rounded-full backdrop-blur-sm">
             <VideoOff size={16} className="text-white" />
           </div>
         )}

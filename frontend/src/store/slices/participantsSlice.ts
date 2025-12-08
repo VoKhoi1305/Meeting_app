@@ -1,5 +1,4 @@
-// src/store/slices/participantsSlice.ts
-import { createSlice,type PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type { Participant, ParticipantsState } from '../../types/participant.types';
 
 const initialState: ParticipantsState = {
@@ -15,7 +14,8 @@ const participantsSlice = createSlice({
       state.list = action.payload;
     },
     addParticipant: (state, action: PayloadAction<Participant>) => {
-      const exists = state.list.find((p) => p.id === action.payload.id);
+      // FIX QUAN TRỌNG: Kiểm tra xem ID đã tồn tại chưa trước khi push
+      const exists = state.list.some((p) => p.id === action.payload.id);
       if (!exists) {
         state.list.push(action.payload);
       }
@@ -38,6 +38,7 @@ const participantsSlice = createSlice({
     ) => {
       const participant = state.list.find((p) => p.peerId === action.payload.peerId);
       if (participant) {
+        // Lưu ý: Stream là non-serializable, Redux Toolkit sẽ cảnh báo nhưng vẫn hoạt động
         participant.stream = action.payload.stream;
       }
     },

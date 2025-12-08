@@ -1,3 +1,76 @@
+// import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
+// import type { Participant, ParticipantsState } from '../../types/participant.types';
+
+// const initialState: ParticipantsState = {
+//   list: [],
+//   localParticipant: null,
+// };
+
+// const participantsSlice = createSlice({
+//   name: 'participants',
+//   initialState,
+//   reducers: {
+//     setParticipants: (state, action: PayloadAction<Participant[]>) => {
+//       state.list = action.payload;
+//     },
+//     addParticipant: (state, action: PayloadAction<Participant>) => {
+//       // FIX QUAN TRỌNG: Kiểm tra xem ID đã tồn tại chưa trước khi push
+//       const exists = state.list.some((p) => p.id === action.payload.id);
+//       if (!exists) {
+//         state.list.push(action.payload);
+//       }
+//     },
+//     removeParticipant: (state, action: PayloadAction<string>) => {
+//       state.list = state.list.filter((p) => p.id !== action.payload);
+//     },
+//     updateParticipant: (
+//       state,
+//       action: PayloadAction<{ id: string; updates: Partial<Participant> }>
+//     ) => {
+//       const participant = state.list.find((p) => p.id === action.payload.id);
+//       if (participant) {
+//         Object.assign(participant, action.payload.updates);
+//       }
+//     },
+//     setParticipantStream: (
+//       state,
+//       action: PayloadAction<{ peerId: string; stream: MediaStream }>
+//     ) => {
+//       const participant = state.list.find((p) => p.peerId === action.payload.peerId);
+//       if (participant) {
+//         // Lưu ý: Stream là non-serializable, Redux Toolkit sẽ cảnh báo nhưng vẫn hoạt động
+//         participant.stream = action.payload.stream;
+//       }
+//     },
+//     setLocalParticipant: (state, action: PayloadAction<Participant>) => {
+//       state.localParticipant = action.payload;
+//     },
+//     updateLocalParticipant: (state, action: PayloadAction<Partial<Participant>>) => {
+//       if (state.localParticipant) {
+//         Object.assign(state.localParticipant, action.payload);
+//       }
+//     },
+//     clearParticipants: (state) => {
+//       state.list = [];
+//       state.localParticipant = null;
+//     },
+//   },
+// });
+
+// export const {
+//   setParticipants,
+//   addParticipant,
+//   removeParticipant,
+//   updateParticipant,
+//   setParticipantStream,
+//   setLocalParticipant,
+//   updateLocalParticipant,
+//   clearParticipants,
+// } = participantsSlice.actions;
+
+// export default participantsSlice.reducer;
+
+// frontend/src/store/slices/participantsSlice.ts
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type { Participant, ParticipantsState } from '../../types/participant.types';
 
@@ -14,7 +87,6 @@ const participantsSlice = createSlice({
       state.list = action.payload;
     },
     addParticipant: (state, action: PayloadAction<Participant>) => {
-      // FIX QUAN TRỌNG: Kiểm tra xem ID đã tồn tại chưa trước khi push
       const exists = state.list.some((p) => p.id === action.payload.id);
       if (!exists) {
         state.list.push(action.payload);
@@ -27,6 +99,7 @@ const participantsSlice = createSlice({
       state,
       action: PayloadAction<{ id: string; updates: Partial<Participant> }>
     ) => {
+      // Tìm theo ID database (participant ID)
       const participant = state.list.find((p) => p.id === action.payload.id);
       if (participant) {
         Object.assign(participant, action.payload.updates);
@@ -36,10 +109,14 @@ const participantsSlice = createSlice({
       state,
       action: PayloadAction<{ peerId: string; stream: MediaStream }>
     ) => {
+      // Tìm theo PeerID (Socket ID của WebRTC)
       const participant = state.list.find((p) => p.peerId === action.payload.peerId);
       if (participant) {
-        // Lưu ý: Stream là non-serializable, Redux Toolkit sẽ cảnh báo nhưng vẫn hoạt động
+        // Gán stream và bật flag video để UI render
         participant.stream = action.payload.stream;
+        participant.isVideoEnabled = true;
+      } else {
+        console.warn('⚠️ [Redux] Không tìm thấy participant với peerId:', action.payload.peerId);
       }
     },
     setLocalParticipant: (state, action: PayloadAction<Participant>) => {

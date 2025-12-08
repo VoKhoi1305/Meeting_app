@@ -94,30 +94,47 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const videoRef = useRef<HTMLVideoElement>(null);
 
   // CRITICAL FIX: Update video element whenever stream changes
-  useEffect(() => {
-    const videoElement = videoRef.current;
-    if (!videoElement) return;
+  // useEffect(() => {
+  //   const videoElement = videoRef.current;
+  //   if (!videoElement) return;
 
-    if (stream) {
-      console.log(`🎥 Attaching stream to video element for ${displayName}`, {
-        streamId: stream.id,
-        tracks: stream.getTracks().length,
-        videoTracks: stream.getVideoTracks().length,
-      });
+  //   if (stream) {
+  //     console.log(`🎥 Attaching stream to video element for ${displayName}`, {
+  //       streamId: stream.id,
+  //       tracks: stream.getTracks().length,
+  //       videoTracks: stream.getVideoTracks().length,
+  //     });
 
-      // Always set srcObject, even if it's the "same" stream object
-      // because the tracks inside may have changed
-      videoElement.srcObject = stream;
+  //     // Always set srcObject, even if it's the "same" stream object
+  //     // because the tracks inside may have changed
+  //     videoElement.srcObject = stream;
 
       
-      videoElement.play().catch((err) => {
-        console.warn('Failed to play video:', err);
-      });
-    } else {
-      console.log(`🎥 Removing stream from video element for ${displayName}`);
-      videoElement.srcObject = null;
-    }
-  }, [stream, displayName]);
+  //     videoElement.play().catch((err) => {
+  //       console.warn('Failed to play video:', err);
+  //     });
+  //   } else {
+  //     console.log(`🎥 Removing stream from video element for ${displayName}`);
+  //     videoElement.srcObject = null;
+  //   }
+  // }, [stream, displayName]);
+  useEffect(() => {
+  const videoElement = videoRef.current;
+  if (!videoElement) return;
+
+  if (stream) {
+    videoElement.srcObject = stream;
+    // THÊM DÒNG NÀY ĐỂ DEBUG
+    console.log(`▶️ VideoPlayer playing stream: ${stream.id}, Tracks: ${stream.getTracks().length}`);
+    
+    // Ép chạy video
+    videoElement.onloadedmetadata = () => {
+        videoElement.play().catch(e => console.error("Play error:", e));
+    };
+  } else {
+    videoElement.srcObject = null;
+  }
+}, [stream, displayName]);
 
   // Additional effect to handle track changes
   useEffect(() => {

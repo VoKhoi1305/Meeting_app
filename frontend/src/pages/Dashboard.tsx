@@ -47,7 +47,7 @@ const Dashboard: React.FC = () => {
 
       {/* Features Grid */}
       <div className="grid md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-lg shadow-md">
+        {/* <div className="bg-white p-6 rounded-lg shadow-md">
           <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
             <Video className="text-blue-600" size={24} />
           </div>
@@ -55,9 +55,9 @@ const Dashboard: React.FC = () => {
           <p className="text-gray-600 text-sm">
             Crystal clear video calls with high-quality audio
           </p>
-        </div>
+        </div> */}
 
-        <div className="bg-white p-6 rounded-lg shadow-md">
+        {/* <div className="bg-white p-6 rounded-lg shadow-md">
           <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
             <Users className="text-green-600" size={24} />
           </div>
@@ -65,9 +65,9 @@ const Dashboard: React.FC = () => {
           <p className="text-gray-600 text-sm">
             Share your screen with participants easily
           </p>
-        </div>
+        </div> */}
 
-        <div className="bg-white p-6 rounded-lg shadow-md">
+        {/* <div className="bg-white p-6 rounded-lg shadow-md">
           <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
             <Calendar className="text-purple-600" size={24} />
           </div>
@@ -75,18 +75,18 @@ const Dashboard: React.FC = () => {
           <p className="text-gray-600 text-sm">
             Join meetings with a simple code or link
           </p>
-        </div>
+        </div> */}
       </div>
 
       {/* Recent Meetings Section - Coming Soon */}
-      <div className="mt-8 bg-white p-8 rounded-lg shadow-md">
+      {/* <div className="mt-8 bg-white p-8 rounded-lg shadow-md">
         <h2 className="text-2xl font-bold mb-4">Recent Meetings</h2>
         <div className="text-center text-gray-500 py-8">
           <Calendar size={48} className="mx-auto mb-4 opacity-50" />
           <p>No recent meetings</p>
           <p className="text-sm mt-2">Start a meeting to see your history here</p>
         </div>
-      </div>
+      </div> */}
 
       {/* Modals */}
       <CreateMeetingModal

@@ -42,7 +42,7 @@ const ParticipantsList: React.FC = () => {
                       <span className="ml-2 text-xs text-gray-500">(You)</span>
                     )}
                   </p>
-                  <div className="flex items-center gap-1 mt-1">
+                  {/* <div className="flex items-center gap-1 mt-1">
                     {participant.connectionStatus === 'connected' ? (
                       <span className="text-xs text-green-600">● Connected</span>
                     ) : participant.connectionStatus === 'connecting' ? (
@@ -50,7 +50,7 @@ const ParticipantsList: React.FC = () => {
                     ) : (
                       <span className="text-xs text-red-600">● Disconnected</span>
                     )}
-                  </div>
+                  </div> */}
                 </div>
               </div>
 

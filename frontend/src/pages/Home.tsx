@@ -13,9 +13,6 @@ const Home = () => {
         <h1 className="text-5xl font-bold text-gray-900 mb-6">
           Welcome to MeetingApp
         </h1>
-        <p className="text-xl text-gray-600 mb-8">
-          Professional online meetings with screen sharing, video, and audio
-        </p>
         <div className="flex gap-4 justify-center">
           {isAuthenticated ? (
             <Link

@@ -51,12 +51,17 @@ const MeetingRoom: React.FC = () => {
   );
 
   // Kích hoạt chức năng phụ đề cho chính mình (chỉ khi không bị mute)
+  const memoizedDisplayName = useMemo(() => {
+    const me = participants.find(p => p.id === myParticipantId);
+    return me?.displayName || user?.fullName || 'Người dùng';
+  }, [participants, myParticipantId, user]);
+
   useSpeechToText(
     webrtcSocketRef.current, 
     meeting?.roomId || null, 
+    memoizedDisplayName,
     isReady && isAudioEnabled
   );
-  
   // --- LOGIC HÌNH NỀN ---
   useEffect(() => {
     // Load hình nền đã lưu

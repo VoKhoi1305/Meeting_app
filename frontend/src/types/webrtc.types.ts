@@ -21,6 +21,7 @@ export interface MediaDevicesState {
   isAudioEnabled: boolean;
   isVideoEnabled: boolean;
   isScreenSharing: boolean;
+  isBlurEnabled: boolean;
 }
 
 export interface SignalData {

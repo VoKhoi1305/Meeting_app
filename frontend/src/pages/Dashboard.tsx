@@ -12,11 +12,11 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="max-w-6xl mx-auto">
-      {/* Welcome Section */}
+      {/* Welcome Section
       <div className="bg-white p-8 rounded-lg shadow-md mb-8">
         <h1 className="text-3xl font-bold mb-2">Welcome back, {user?.fullName}!</h1>
         <p className="text-gray-600">Start or join a meeting to collaborate with your team</p>
-      </div>
+      </div> */}
 
       {/* Quick Actions */}
       <div className="grid md:grid-cols-2 gap-6 mb-8">

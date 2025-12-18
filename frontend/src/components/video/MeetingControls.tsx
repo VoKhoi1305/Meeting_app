@@ -1,341 +1,60 @@
-// // import React, { useState, useEffect } from 'react';
-// // import { useNavigate } from 'react-router-dom';
-// // import { useDispatch, useSelector } from 'react-redux';
-// // import type { RootState, AppDispatch } from '../../store/store';
-// // import { useMediaStream } from '../../hooks/useMediaStream';
-// // import { useMeeting } from '../../hooks/useMeeting';
-// // import { endMeeting as endMeetingAction } from '../../store/slices/meetingSlice';
-// // import {
-// //   Mic, MicOff, Video, VideoOff, Monitor, MonitorOff, 
-// //   PhoneOff, Settings, Loader2, X, User, Save
-// // } from 'lucide-react';
-// // import toast from 'react-hot-toast';
 
-// // const MeetingControls: React.FC = () => {
-// //   const navigate = useNavigate();
-// //   const dispatch = useDispatch<AppDispatch>();
-
-// //   // Lấy danh sách participants để tìm tên hiện tại của mình
-// //   const { current: meeting, isHost, myParticipantId } = useSelector(
-// //     (state: RootState) => state.meeting
-// //   );
-// //   const participants = useSelector((state: RootState) => state.participants.list);
-  
-// //   const { isAudioEnabled, isVideoEnabled, isScreenSharing } = useSelector(
-// //     (state: RootState) => state.mediaDevices
-// //   );
-
-// //   const { toggleAudio, toggleVideo, startScreenShare, stopScreenShare } = useMediaStream();
-
-// //   // Lấy hàm changeDisplayName từ hook
-// //   const { leaveRoom, endMeeting: endMeetingSocket, changeDisplayName } = useMeeting(
-// //     meeting?.roomId || null, 
-// //     myParticipantId
-// //   );
-
-// //   // State cho UI
-// //   const [isTogglingVideo, setIsTogglingVideo] = useState(false);
-// //   const [isTogglingScreen, setIsTogglingScreen] = useState(false);
-  
-// //   // State cho Settings Modal
-// //   const [showSettings, setShowSettings] = useState(false);
-// //   const [newName, setNewName] = useState('');
-
-// //   // Effect để set tên hiện tại vào input khi mở settings
-// //   useEffect(() => {
-// //     if (showSettings && myParticipantId) {
-// //       const me = participants.find(p => p.id === myParticipantId);
-// //       if (me) setNewName(me.displayName);
-// //     }
-// //   }, [showSettings, myParticipantId, participants]);
-
-// //   const handleToggleVideo = async () => {
-// //     setIsTogglingVideo(true);
-// //     try {
-// //       await toggleVideo(); 
-// //     } catch (error) {
-// //       console.error('Error toggling video:', error);
-// //     } finally {
-// //       setIsTogglingVideo(false);
-// //     }
-// //   };
-
-// //   const handleToggleScreenShare = async () => {
-// //     setIsTogglingScreen(true);
-// //     try {
-// //       if (isScreenSharing) {
-// //         await stopScreenShare();
-// //       } else {
-// //         await startScreenShare();
-// //       }
-// //     } catch (error) {
-// //       console.error('Screen share error:', error);
-// //     } finally {
-// //       setIsTogglingScreen(false);
-// //     }
-// //   };
-
-// //   const handleLeaveMeeting = () => {
-// //     if (leaveRoom) leaveRoom();
-// //     navigate('/dashboard');
-// //     toast.success('Left meeting');
-// //   };
-
-// //   const handleEndMeeting = async () => {
-// //     if (meeting && window.confirm('End meeting for everyone?')) {
-// //       try {
-// //         await dispatch(endMeetingAction(meeting.id)).unwrap();
-// //         if (endMeetingSocket) endMeetingSocket();
-// //         toast.success('Meeting ended successfully');
-// //         navigate('/dashboard');
-// //       } catch (error) {
-// //         console.error('Failed to end meeting:', error);
-// //         toast.error('Failed to end meeting');
-// //       }
-// //     }
-// //   };
-
-// //   // Hàm xử lý lưu tên mới
-// //   const handleSaveName = () => {
-// //     if (!newName.trim()) {
-// //       toast.error('Tên không được để trống');
-// //       return;
-// //     }
-// //     if (changeDisplayName) {
-// //       changeDisplayName(newName);
-// //       toast.success('Đã đổi tên thành công');
-// //       setShowSettings(false);
-// //     }
-// //   };
-
-// //   return (
-// //     <>
-// //       {/* --- SETTINGS MODAL --- */}
-// //       {showSettings && (
-// //         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[60] p-4">
-// //           <div className="bg-gray-800 border border-gray-700 rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
-// //             {/* Modal Header */}
-// //             <div className="flex items-center justify-between p-4 border-b border-gray-700 bg-gray-800/50">
-// //               <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-// //                 <Settings size={20} className="text-blue-400" />
-// //                 Cài đặt cuộc họp
-// //               </h3>
-// //               <button 
-// //                 onClick={() => setShowSettings(false)}
-// //                 className="text-gray-400 hover:text-white hover:bg-gray-700 p-1 rounded-lg transition"
-// //               >
-// //                 <X size={20} />
-// //               </button>
-// //             </div>
-
-// //             {/* Modal Body */}
-// //             <div className="p-6 space-y-4">
-// //               <div className="space-y-2">
-// //                 <label className="text-sm font-medium text-gray-300 block">Tên hiển thị</label>
-// //                 <div className="relative">
-// //                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-// //                     <User size={18} className="text-gray-500" />
-// //                   </div>
-// //                   <input
-// //                     type="text"
-// //                     value={newName}
-// //                     onChange={(e) => setNewName(e.target.value)}
-// //                     onKeyDown={(e) => e.key === 'Enter' && handleSaveName()}
-// //                     className="w-full bg-gray-900 border border-gray-600 text-white rounded-lg pl-10 pr-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition outline-none"
-// //                     placeholder="Nhập tên của bạn..."
-// //                   />
-// //                 </div>
-// //                 <p className="text-xs text-gray-500">Tên này sẽ hiển thị với tất cả mọi người trong phòng.</p>
-// //               </div>
-// //             </div>
-
-// //             {/* Modal Footer */}
-// //             <div className="p-4 border-t border-gray-700 bg-gray-900/50 flex justify-end gap-3">
-// //               <button
-// //                 onClick={() => setShowSettings(false)}
-// //                 className="px-4 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-gray-700 transition text-sm font-medium"
-// //               >
-// //                 Hủy
-// //               </button>
-// //               <button
-// //                 onClick={handleSaveName}
-// //                 className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 transition text-sm font-medium"
-// //               >
-// //                 <Save size={16} />
-// //                 Lưu thay đổi
-// //               </button>
-// //             </div>
-// //           </div>
-// //         </div>
-// //       )}
-
-// //       {/* --- CONTROL BAR --- */}
-// //       <div className="fixed bottom-0 left-0 right-0 bg-gray-900 border-t border-gray-700 p-4 z-50">
-// //         <div className="max-w-4xl mx-auto flex items-center justify-center gap-4">
-// //           {/* Audio Toggle */}
-// //           <button
-// //             onClick={toggleAudio}
-// //             className={`p-4 rounded-full transition-colors ${
-// //               isAudioEnabled ? 'bg-gray-700 hover:bg-gray-600' : 'bg-red-600 hover:bg-red-700'
-// //             }`}
-// //             title={isAudioEnabled ? 'Mute' : 'Unmute'}
-// //           >
-// //             {isAudioEnabled ? <Mic className="text-white" size={24} /> : <MicOff className="text-white" size={24} />}
-// //           </button>
-
-// //           {/* Video Toggle */}
-// //           <button
-// //             onClick={handleToggleVideo}
-// //             disabled={isTogglingVideo}
-// //             className={`p-4 rounded-full transition-colors relative ${
-// //               isVideoEnabled ? 'bg-gray-700 hover:bg-gray-600' : 'bg-red-600 hover:bg-red-700'
-// //             } ${isTogglingVideo ? 'opacity-50' : ''}`}
-// //             title={isVideoEnabled ? 'Stop Video' : 'Start Video'}
-// //           >
-// //             {isTogglingVideo ? (
-// //               <Loader2 className="text-white animate-spin" size={24} />
-// //             ) : isVideoEnabled ? (
-// //               <Video className="text-white" size={24} />
-// //             ) : (
-// //               <VideoOff className="text-white" size={24} />
-// //             )}
-// //           </button>
-
-// //           {/* Screen Share */}
-// //           <button
-// //             onClick={handleToggleScreenShare}
-// //             disabled={isTogglingScreen}
-// //             className={`p-4 rounded-full transition-colors ${
-// //               isScreenSharing ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-700 hover:bg-gray-600'
-// //             }`}
-// //             title="Share Screen"
-// //           >
-// //             {isTogglingScreen ? (
-// //               <Loader2 className="text-white animate-spin" size={24} />
-// //             ) : isScreenSharing ? (
-// //               <MonitorOff className="text-white" size={24} />
-// //             ) : (
-// //               <Monitor className="text-white" size={24} />
-// //             )}
-// //           </button>
-
-// //           {/* Settings Button - Giờ sẽ mở Modal */}
-// //           <button 
-// //             onClick={() => setShowSettings(true)}
-// //             className={`p-4 rounded-full transition-colors ${
-// //               showSettings ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'
-// //             }`}
-// //             title="Settings"
-// //           >
-// //             <Settings className="text-white" size={24} />
-// //           </button>
-
-// //           {/* Leave/End Buttons */}
-// //           {isHost ? (
-// //             <button onClick={handleEndMeeting} className="px-6 py-4 rounded-full bg-red-600 hover:bg-red-700 flex gap-2">
-// //               <PhoneOff className="text-white" size={24} />
-// //               <span className="text-white font-medium">End</span>
-// //             </button>
-// //           ) : (
-// //             <button onClick={handleLeaveMeeting} className="px-6 py-4 rounded-full bg-red-600 hover:bg-red-700 flex gap-2">
-// //               <PhoneOff className="text-white" size={24} />
-// //               <span className="text-white font-medium">Leave</span>
-// //             </button>
-// //           )}
-// //         </div>
-// //       </div>
-// //     </>
-// //   );
-// // };
-
-// // export default MeetingControls;
-
-// import React, { useState, useEffect } from 'react';
-// import { useNavigate } from 'react-router-dom';
+// import React, { useState } from 'react';
 // import { useDispatch, useSelector } from 'react-redux';
+// import { useNavigate } from 'react-router-dom';
 // import type { RootState, AppDispatch } from '../../store/store';
 // import { useMediaStream } from '../../hooks/useMediaStream';
 // import { useMeeting } from '../../hooks/useMeeting';
 // import { endMeeting as endMeetingAction } from '../../store/slices/meetingSlice';
-// import { updateParticipant } from '../../store/slices/participantsSlice'; // [QUAN TRỌNG] Import action này
 // import {
 //   Mic, MicOff, Video, VideoOff, Monitor, MonitorOff, 
-//   PhoneOff, Settings, Loader2, X, User, Save
+//   PhoneOff, Settings, Loader2
 // } from 'lucide-react';
 // import toast from 'react-hot-toast';
 
-// const MeetingControls: React.FC = () => {
+// interface MeetingControlsProps {
+//   onOpenSettings: () => void; // Callback để mở modal từ component cha
+// }
+
+// const MeetingControls: React.FC<MeetingControlsProps> = ({ onOpenSettings }) => {
 //   const navigate = useNavigate();
 //   const dispatch = useDispatch<AppDispatch>();
 
-//   // Lấy dữ liệu từ Redux
 //   const { current: meeting, isHost, myParticipantId } = useSelector(
 //     (state: RootState) => state.meeting
 //   );
-  
-//   // Lấy danh sách để tìm tên hiện tại (cho vào ô input ban đầu)
-//   const participants = useSelector((state: RootState) => state.participants.list);
   
 //   const { isAudioEnabled, isVideoEnabled, isScreenSharing } = useSelector(
 //     (state: RootState) => state.mediaDevices
 //   );
 
 //   const { toggleAudio, toggleVideo, startScreenShare, stopScreenShare } = useMediaStream();
-
-//   // Gọi hook useMeeting
-//   const { leaveRoom, endMeeting: endMeetingSocket, changeDisplayName } = useMeeting(
+//   const { leaveRoom, endMeeting: endMeetingSocket } = useMeeting(
 //     meeting?.roomId || null, 
 //     myParticipantId
 //   );
 
-//   // State UI
 //   const [isTogglingVideo, setIsTogglingVideo] = useState(false);
 //   const [isTogglingScreen, setIsTogglingScreen] = useState(false);
-  
-//   // State cho Modal đổi tên
-//   const [showSettings, setShowSettings] = useState(false);
-//   const [newName, setNewName] = useState('');
-
-//   // Effect: Khi mở modal, tự động điền tên hiện tại vào ô input
-//   useEffect(() => {
-//     if (showSettings && myParticipantId) {
-//       const me = participants.find(p => p.id === myParticipantId);
-//       if (me) setNewName(me.displayName);
-//     }
-//   }, [showSettings, myParticipantId, participants]);
-
-//   // --- CÁC HÀM XỬ LÝ ---
 
 //   const handleToggleVideo = async () => {
 //     setIsTogglingVideo(true);
-//     try {
-//       await toggleVideo(); 
-//     } catch (error) {
-//       console.error('Error toggling video:', error);
-//     } finally {
-//       setIsTogglingVideo(false);
-//     }
+//     try { await toggleVideo(); } 
+//     catch (error) { console.error(error); } 
+//     finally { setIsTogglingVideo(false); }
 //   };
 
 //   const handleToggleScreenShare = async () => {
 //     setIsTogglingScreen(true);
-//     try {
-//       if (isScreenSharing) {
-//         await stopScreenShare();
-//       } else {
-//         await startScreenShare();
-//       }
-//     } catch (error) {
-//       console.error('Screen share error:', error);
-//     } finally {
-//       setIsTogglingScreen(false);
-//     }
+//     try { isScreenSharing ? await stopScreenShare() : await startScreenShare(); } 
+//     catch (error) { console.error(error); } 
+//     finally { setIsTogglingScreen(false); }
 //   };
 
 //   const handleLeaveMeeting = () => {
 //     if (leaveRoom) leaveRoom();
 //     navigate('/dashboard');
-//     toast.success('Left meeting');
+//     toast.success('Đã rời cuộc họp');
 //   };
 
 //   const handleEndMeeting = async () => {
@@ -343,178 +62,86 @@
 //       try {
 //         await dispatch(endMeetingAction(meeting.id)).unwrap();
 //         if (endMeetingSocket) endMeetingSocket();
-//         toast.success('Đã kết thúc cuộc họp');
+//         toast.success('Cuộc họp đã kết thúc');
 //         navigate('/dashboard');
 //       } catch (error) {
-//         console.error('Failed to end meeting:', error);
-//         toast.error('Lỗi khi kết thúc cuộc họp');
+//         toast.error('Lỗi khi kết thúc');
 //       }
 //     }
 //   };
 
-//   // [QUAN TRỌNG] Hàm xử lý lưu tên mới
-//   const handleSaveName = () => {
-//     if (!newName.trim()) {
-//       toast.error('Tên không được để trống');
-//       return;
-//     }
-
-//     if (changeDisplayName && myParticipantId) {
-//       // 1. Gửi Socket lên server (để người khác thấy)
-//       changeDisplayName(newName);
-      
-//       // 2. Cập nhật Redux ngay lập tức (để MÀN HÌNH BẢN THÂN thấy ngay)
-//       // Vì trong useMeeting dòng này đang bị comment nên ta làm ở đây
-//       dispatch(updateParticipant({ 
-//         id: myParticipantId, 
-//         updates: { displayName: newName } 
-//       }));
-
-//       toast.success('Đã đổi tên thành công');
-//       setShowSettings(false);
-//     }
-//   };
+//   // Helper component cho nút bấm tròn đẹp
+//   const ControlBtn = ({ 
+//     active, danger, onClick, disabled, icon: Icon, activeIcon: ActiveIcon 
+//   }: any) => (
+//     <button
+//       onClick={onClick}
+//       disabled={disabled}
+//       className={`
+//         relative p-4 rounded-full transition-all duration-300 shadow-lg backdrop-blur-sm border border-white/10
+//         ${danger 
+//           ? 'bg-red-500/80 hover:bg-red-600 text-white' 
+//           : active 
+//             ? 'bg-gray-800/80 hover:bg-gray-700 text-white' 
+//             : 'bg-red-500/80 hover:bg-red-600 text-white'
+//         }
+//         ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:scale-110'}
+//       `}
+//     >
+//       {disabled ? <Loader2 className="animate-spin" size={24} /> : (
+//         active ? <Icon size={24} /> : <ActiveIcon size={24} />
+//       )}
+//     </button>
+//   );
 
 //   return (
-//     <>
-//       {/* --- MODAL CÀI ĐẶT (Hiện ra khi bấm nút Settings) --- */}
-//       {showSettings && (
-//         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[60] p-4 animate-in fade-in duration-200">
-//           <div className="bg-gray-800 border border-gray-700 rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
-            
-//             {/* Header Modal */}
-//             <div className="flex items-center justify-between p-4 border-b border-gray-700 bg-gray-800">
-//               <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-//                 <Settings size={20} className="text-blue-400" />
-//                 Cài đặt cuộc họp
-//               </h3>
-//               <button 
-//                 onClick={() => setShowSettings(false)}
-//                 className="text-gray-400 hover:text-white hover:bg-gray-700 p-1 rounded-lg transition"
-//               >
-//                 <X size={20} />
-//               </button>
-//             </div>
+//     <div className="fixed bottom-6 left-0 right-0 z-50 flex justify-center pointer-events-none">
+//       <div className="bg-gray-900/60 backdrop-blur-xl border border-white/10 px-6 py-4 rounded-2xl flex items-center gap-4 shadow-2xl pointer-events-auto">
+        
+//         <ControlBtn 
+//           active={isAudioEnabled} 
+//           onClick={toggleAudio} 
+//           icon={Mic} activeIcon={MicOff} 
+//         />
 
-//             {/* Body Modal */}
-//             <div className="p-6 space-y-4">
-//               <div className="space-y-2">
-//                 <label className="text-sm font-medium text-gray-300 block">Tên hiển thị</label>
-//                 <div className="relative">
-//                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-//                     <User size={18} className="text-gray-500" />
-//                   </div>
-//                   <input
-//                     type="text"
-//                     value={newName}
-//                     onChange={(e) => setNewName(e.target.value)}
-//                     onKeyDown={(e) => e.key === 'Enter' && handleSaveName()}
-//                     className="w-full bg-gray-900 border border-gray-600 text-white rounded-lg pl-10 pr-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition outline-none placeholder-gray-500"
-//                     placeholder="Nhập tên hiển thị mới..."
-//                     autoFocus
-//                   />
-//                 </div>
-//                 <p className="text-xs text-gray-500">Tên mới sẽ hiển thị ngay lập tức với mọi người.</p>
-//               </div>
-//             </div>
+//         <ControlBtn 
+//           active={isVideoEnabled} 
+//           onClick={handleToggleVideo} 
+//           disabled={isTogglingVideo}
+//           icon={Video} activeIcon={VideoOff} 
+//         />
 
-//             {/* Footer Modal */}
-//             <div className="p-4 border-t border-gray-700 bg-gray-900/50 flex justify-end gap-3">
-//               <button
-//                 onClick={() => setShowSettings(false)}
-//                 className="px-4 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-gray-700 transition text-sm font-medium"
-//               >
-//                 Hủy
-//               </button>
-//               <button
-//                 onClick={handleSaveName}
-//                 className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 transition text-sm font-medium shadow-lg shadow-blue-500/20"
-//               >
-//                 <Save size={16} />
-//                 Lưu thay đổi
-//               </button>
-//             </div>
-//           </div>
-//         </div>
-//       )}
+//         <button
+//           onClick={handleToggleScreenShare}
+//           disabled={isTogglingScreen}
+//           className={`p-4 rounded-full transition-all shadow-lg backdrop-blur-sm border border-white/10 ${
+//             isScreenSharing ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-800/80 text-white hover:bg-gray-700'
+//           }`}
+//         >
+//           {isTogglingScreen ? <Loader2 className="animate-spin" size={24} /> : 
+//             isScreenSharing ? <MonitorOff size={24} /> : <Monitor size={24} />
+//           }
+//         </button>
 
-//       {/* --- THANH ĐIỀU KHIỂN CHÍNH (Bottom Bar) --- */}
-//       <div className="fixed bottom-0 left-0 right-0 bg-gray-900 border-t border-gray-700 p-4 z-50">
-//         <div className="max-w-4xl mx-auto flex items-center justify-center gap-4">
-          
-//           {/* Audio */}
-//           <button
-//             onClick={toggleAudio}
-//             className={`p-4 rounded-full transition-colors ${
-//               isAudioEnabled ? 'bg-gray-700 hover:bg-gray-600' : 'bg-red-600 hover:bg-red-700'
-//             }`}
-//             title={isAudioEnabled ? 'Mute' : 'Unmute'}
-//           >
-//             {isAudioEnabled ? <Mic className="text-white" size={24} /> : <MicOff className="text-white" size={24} />}
-//           </button>
+//         <div className="w-px h-10 bg-white/20 mx-2"></div>
 
-//           {/* Video */}
-//           <button
-//             onClick={handleToggleVideo}
-//             disabled={isTogglingVideo}
-//             className={`p-4 rounded-full transition-colors relative ${
-//               isVideoEnabled ? 'bg-gray-700 hover:bg-gray-600' : 'bg-red-600 hover:bg-red-700'
-//             } ${isTogglingVideo ? 'opacity-50' : ''}`}
-//             title={isVideoEnabled ? 'Stop Video' : 'Start Video'}
-//           >
-//             {isTogglingVideo ? (
-//               <Loader2 className="text-white animate-spin" size={24} />
-//             ) : isVideoEnabled ? (
-//               <Video className="text-white" size={24} />
-//             ) : (
-//               <VideoOff className="text-white" size={24} />
-//             )}
-//           </button>
+//         {/* Nút Settings mới */}
+//         <button 
+//           onClick={onOpenSettings}
+//           className="p-4 rounded-full bg-gray-800/80 hover:bg-gray-700 text-white shadow-lg backdrop-blur-sm border border-white/10 hover:scale-110 transition-all"
+//         >
+//           <Settings size={24} />
+//         </button>
 
-//           {/* Screen Share */}
-//           <button
-//             onClick={handleToggleScreenShare}
-//             disabled={isTogglingScreen}
-//             className={`p-4 rounded-full transition-colors ${
-//               isScreenSharing ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-700 hover:bg-gray-600'
-//             }`}
-//             title="Share Screen"
-//           >
-//             {isTogglingScreen ? (
-//               <Loader2 className="text-white animate-spin" size={24} />
-//             ) : isScreenSharing ? (
-//               <MonitorOff className="text-white" size={24} />
-//             ) : (
-//               <Monitor className="text-white" size={24} />
-//             )}
-//           </button>
-
-//           {/* Settings Button - Giờ sẽ mở Modal */}
-//           <button 
-//             onClick={() => setShowSettings(true)}
-//             className={`p-4 rounded-full transition-colors ${
-//               showSettings ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'
-//             }`}
-//             title="Settings"
-//           >
-//             <Settings className="text-white" size={24} />
-//           </button>
-
-//           {/* Leave/End Button */}
-//           {isHost ? (
-//             <button onClick={handleEndMeeting} className="px-6 py-4 rounded-full bg-red-600 hover:bg-red-700 flex gap-2 shadow-lg shadow-red-900/20">
-//               <PhoneOff className="text-white" size={24} />
-//               <span className="text-white font-medium">End</span>
-//             </button>
-//           ) : (
-//             <button onClick={handleLeaveMeeting} className="px-6 py-4 rounded-full bg-red-600 hover:bg-red-700 flex gap-2 shadow-lg shadow-red-900/20">
-//               <PhoneOff className="text-white" size={24} />
-//               <span className="text-white font-medium">Leave</span>
-//             </button>
-//           )}
-//         </div>
+//         <button 
+//           onClick={isHost ? handleEndMeeting : handleLeaveMeeting} 
+//           className="px-6 py-4 rounded-full bg-red-600 hover:bg-red-700 text-white font-medium flex gap-2 items-center shadow-lg shadow-red-500/20 hover:scale-105 transition-all"
+//         >
+//           <PhoneOff size={24} />
+//           <span className="hidden sm:inline">{isHost ? 'Kết thúc' : 'Rời phòng'}</span>
+//         </button>
 //       </div>
-//     </>
+//     </div>
 //   );
 // };
 
@@ -529,12 +156,12 @@ import { useMeeting } from '../../hooks/useMeeting';
 import { endMeeting as endMeetingAction } from '../../store/slices/meetingSlice';
 import {
   Mic, MicOff, Video, VideoOff, Monitor, MonitorOff, 
-  PhoneOff, Settings, Loader2
+  PhoneOff, Settings, Loader2, Image as ImageIcon, Sparkles // Import thêm icon
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface MeetingControlsProps {
-  onOpenSettings: () => void; // Callback để mở modal từ component cha
+  onOpenSettings: () => void;
 }
 
 const MeetingControls: React.FC<MeetingControlsProps> = ({ onOpenSettings }) => {
@@ -545,11 +172,17 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({ onOpenSettings }) => 
     (state: RootState) => state.meeting
   );
   
-  const { isAudioEnabled, isVideoEnabled, isScreenSharing } = useSelector(
-    (state: RootState) => state.mediaDevices
+  // Lấy thêm isBlurEnabled
+  const { isAudioEnabled, isVideoEnabled, isScreenSharing, isBlurEnabled } = useSelector(
+    (state: RootState) => (state as any).mediaDevices
   );
 
-  const { toggleAudio, toggleVideo, startScreenShare, stopScreenShare } = useMediaStream();
+  // Lấy thêm hàm toggleBackgroundBlur
+  const { 
+    toggleAudio, toggleVideo, startScreenShare, stopScreenShare, 
+    toggleBackgroundBlur 
+  } = useMediaStream();
+  
   const { leaveRoom, endMeeting: endMeetingSocket } = useMeeting(
     meeting?.roomId || null, 
     myParticipantId
@@ -557,6 +190,7 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({ onOpenSettings }) => 
 
   const [isTogglingVideo, setIsTogglingVideo] = useState(false);
   const [isTogglingScreen, setIsTogglingScreen] = useState(false);
+  const [isTogglingBlur, setIsTogglingBlur] = useState(false); // State loading cho Blur
 
   const handleToggleVideo = async () => {
     setIsTogglingVideo(true);
@@ -570,6 +204,28 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({ onOpenSettings }) => 
     try { isScreenSharing ? await stopScreenShare() : await startScreenShare(); } 
     catch (error) { console.error(error); } 
     finally { setIsTogglingScreen(false); }
+  };
+
+  // Hàm xử lý Blur mới
+  const handleToggleBlur = async () => {
+    if (isScreenSharing) {
+        toast.error("Vui lòng tắt chia sẻ màn hình trước khi bật nền ảo");
+        return;
+    }
+    if (!isVideoEnabled && !isBlurEnabled) {
+        toast.error("Vui lòng bật camera trước");
+        return;
+    }
+
+    setIsTogglingBlur(true);
+    try {
+        await toggleBackgroundBlur();
+        toast.success(isBlurEnabled ? "Đã tắt làm mờ nền" : "Đã bật làm mờ nền");
+    } catch (error) {
+        console.error(error);
+    } finally {
+        setIsTogglingBlur(false);
+    }
   };
 
   const handleLeaveMeeting = () => {
@@ -591,7 +247,6 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({ onOpenSettings }) => 
     }
   };
 
-  // Helper component cho nút bấm tròn đẹp
   const ControlBtn = ({ 
     active, danger, onClick, disabled, icon: Icon, activeIcon: ActiveIcon 
   }: any) => (
@@ -632,6 +287,20 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({ onOpenSettings }) => 
           icon={Video} activeIcon={VideoOff} 
         />
 
+        {/* Nút Blur Background Mới */}
+        <button
+          onClick={handleToggleBlur}
+          disabled={isTogglingBlur || isScreenSharing}
+          title="Làm mờ phông nền"
+          className={`
+            p-4 rounded-full transition-all shadow-lg backdrop-blur-sm border border-white/10
+            ${isBlurEnabled ? 'bg-blue-600 text-white' : 'bg-gray-800/80 text-white hover:bg-gray-700'}
+            ${(isTogglingBlur || isScreenSharing) ? 'opacity-50 cursor-not-allowed' : 'hover:scale-110'}
+          `}
+        >
+          {isTogglingBlur ? <Loader2 className="animate-spin" size={24} /> : <Sparkles size={24} />}
+        </button>
+
         <button
           onClick={handleToggleScreenShare}
           disabled={isTogglingScreen}
@@ -646,7 +315,6 @@ const MeetingControls: React.FC<MeetingControlsProps> = ({ onOpenSettings }) => 
 
         <div className="w-px h-10 bg-white/20 mx-2"></div>
 
-        {/* Nút Settings mới */}
         <button 
           onClick={onOpenSettings}
           className="p-4 rounded-full bg-gray-800/80 hover:bg-gray-700 text-white shadow-lg backdrop-blur-sm border border-white/10 hover:scale-110 transition-all"

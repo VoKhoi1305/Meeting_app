@@ -19,7 +19,7 @@ export const useWebRTC = (
   const dispatch = useDispatch<AppDispatch>();
   const peerConnections = useRef<Map<string, PeerConnectionWrapper>>(new Map());
   const localStreamRef = useRef<MediaStream | null>(null);
-  
+  const subtitleTimeouts = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   // Ref để kiểm soát việc đã join room hay chưa
   const hasJoinedRef = useRef(false);
 
@@ -258,9 +258,17 @@ export const useWebRTC = (
   const handleNewSubtitle = useCallback((data: { peerId: string; text: string; displayName: string }) => {
     dispatch(updateSubtitle(data));
 
-    setTimeout(() => {
+    if (subtitleTimeouts.current.has(data.peerId)) {
+      clearTimeout(subtitleTimeouts.current.get(data.peerId));
+    }
+
+    // Đặt timeout mới: Nếu sau 3 giây không có dữ liệu mới thì mới xóa
+    const timeout = setTimeout(() => {
       dispatch(removeSubtitle(data.peerId));
-    }, 4000);
+      subtitleTimeouts.current.delete(data.peerId);
+    }, 3000);
+
+    subtitleTimeouts.current.set(data.peerId, timeout);
   }, [dispatch]);
 
   useEffect(() => {
@@ -282,6 +290,7 @@ export const useWebRTC = (
       webrtcSocket.off('ice-candidate');
       webrtcSocket.off('participant-left');
       webrtcSocket.off('new-subtitle'); // Hủy lắng nghe
+      subtitleTimeouts.current.forEach(clearTimeout);
     };
   }, [webrtcSocket, handleExistingParticipants, handleNewParticipant, handleOffer, handleAnswer, handleIceCandidate, handleParticipantLeft, handleNewSubtitle]);
 

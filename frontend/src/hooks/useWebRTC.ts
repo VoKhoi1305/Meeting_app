@@ -5,7 +5,7 @@ import type { AppDispatch } from '../store/store';
 import { setParticipantStream, updateParticipant } from '../store/slices/participantsSlice';
 import { createPeerConnection } from '../utils/webrtc-utils';
 import { WEBSOCKET_EVENTS } from '../constants/meeting.constants';
-
+import { updateSubtitle, removeSubtitle } from '../store/slices/subtitleSlice';
 interface PeerConnectionWrapper {
   peerId: string;
   connection: RTCPeerConnection;
@@ -248,12 +248,43 @@ export const useWebRTC = (
         webrtcSocket.emit('leave-room', { roomId });
         hasJoinedRef.current = false;
         
-        // Đóng các kết nối
+ 
         peerConnections.current.forEach((p) => p.connection.close());
         peerConnections.current.clear();
       }
     };
-  }, [webrtcSocket, roomId, localStream]); // localStream có trong deps để kích hoạt Join khi stream sẵn sàng
+  }, [webrtcSocket, roomId, localStream]); 
+
+  const handleNewSubtitle = useCallback((data: { peerId: string; text: string; displayName: string }) => {
+    dispatch(updateSubtitle(data));
+
+    setTimeout(() => {
+      dispatch(removeSubtitle(data.peerId));
+    }, 4000);
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (!webrtcSocket) return;
+
+    webrtcSocket.on('existing-participants', handleExistingParticipants);
+    webrtcSocket.on('new-participant', handleNewParticipant);
+    webrtcSocket.on('offer', handleOffer);
+    webrtcSocket.on('answer', handleAnswer);
+    webrtcSocket.on('ice-candidate', handleIceCandidate);
+    webrtcSocket.on('participant-left', handleParticipantLeft);
+    webrtcSocket.on('new-subtitle', handleNewSubtitle); // Lắng nghe phụ đề
+
+    return () => {
+      webrtcSocket.off('existing-participants');
+      webrtcSocket.off('new-participant');
+      webrtcSocket.off('offer');
+      webrtcSocket.off('answer');
+      webrtcSocket.off('ice-candidate');
+      webrtcSocket.off('participant-left');
+      webrtcSocket.off('new-subtitle'); // Hủy lắng nghe
+    };
+  }, [webrtcSocket, handleExistingParticipants, handleNewParticipant, handleOffer, handleAnswer, handleIceCandidate, handleParticipantLeft, handleNewSubtitle]);
+
 
   return { peerConnections: peerConnections.current };
 };

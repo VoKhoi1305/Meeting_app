@@ -3,13 +3,14 @@ import authReducer from './slices/authSlice';
 import meetingReducer from './slices/meetingSlice';
 import participantsReducer from './slices/participantsSlice';
 import mediaDevicesReducer from './slices/mediaDevicesSlice';
-
+import subtitleReducer from './slices/subtitleSlice'; // Thêm mới
 export const store = configureStore({
   reducer: {
     auth: authReducer,
     meeting: meetingReducer,
     participants: participantsReducer,
     mediaDevices: mediaDevicesReducer,
+    subtitles: subtitleReducer, // Thêm mới
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

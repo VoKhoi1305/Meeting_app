@@ -1,5 +1,13 @@
-import { useEffect, useRef } from "react";
+
+
+import { useEffect, useRef, useState } from "react";
 import type { Socket } from "socket.io-client";
+
+declare global {
+  interface Window {
+    sherpaOnnx: any;
+  }
+}
 
 export function useZipformerVI(
   socket: Socket | null,
@@ -7,76 +15,160 @@ export function useZipformerVI(
   displayName: string,
   enabled: boolean
 ) {
+  const [isModelReady, setIsModelReady] = useState(false);
   const recognizerRef = useRef<any>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const workletRef = useRef<AudioWorkletNode | null>(null);
+  const streamRef = useRef<any>(null);
+  const isInitializingRef = useRef<boolean>(false);
 
   useEffect(() => {
-    if (enabled && socket && roomId) {
-      start(socket);
-    } else {
-      cleanup();
-    }
-    return cleanup;
-  }, [enabled, roomId, socket]);
+    let aborted = false;
+    let checkInterval: ReturnType<typeof setInterval>;
 
-  async function start(activeSocket: Socket) {
-    try {
-      // @ts-ignore - Truy cập từ script /lib/sherpa-onnx.js đã load ở index.html
-      const sherpa = window.sherpaOnnx; 
-
-      if (!sherpa) {
-        console.error("Sherpa-ONNX Web Engine chưa được tải! Hãy kiểm tra file trong public/lib/");
-        return;
+    const internalCleanup = () => {
+      if (workletRef.current) {
+        workletRef.current.port.onmessage = null; // Ngắt listener
+        workletRef.current.disconnect();
+        workletRef.current = null;
       }
+      if (streamRef.current) {
+        try { streamRef.current.free(); } catch (e) {}
+        streamRef.current = null;
+      }
+      if (recognizerRef.current) {
+        try { recognizerRef.current.free(); } catch (e) {}
+        recognizerRef.current = null;
+      }
+      if (audioCtxRef.current) {
+        if (audioCtxRef.current.state !== "closed") {
+          audioCtxRef.current.close();
+        }
+        audioCtxRef.current = null;
+      }
+      isInitializingRef.current = false;
+      if (!aborted) setIsModelReady(false);
+    };
 
-      audioCtxRef.current = new AudioContext({ sampleRate: 16000 });
-      await audioCtxRef.current.audioWorklet.addModule("/audio-processor.js");
+    const start = async () => {
+      if (isInitializingRef.current || aborted) return;
+      if (audioCtxRef.current?.state === "running") return;
 
-      const mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const source = audioCtxRef.current.createMediaStreamSource(mediaStream);
+      try {
+        isInitializingRef.current = true;
+        const sherpa = window.sherpaOnnx;
 
-      workletRef.current = new AudioWorkletNode(audioCtxRef.current, "audio-processor");
-      source.connect(workletRef.current);
-      workletRef.current.connect(audioCtxRef.current.destination);
+        // 1. Setup AudioContext
+        const audioCtx = new AudioContext({ sampleRate: 16000 });
+        audioCtxRef.current = audioCtx;
+        
+        // Đảm bảo file này nằm đúng ở public/audio-processor.js
+        await audioCtx.audioWorklet.addModule("/audio-processor.js");
+        if (aborted) { internalCleanup(); return; }
 
-      // CẤU HÌNH KHỚP VỚI FILE CỦA BẠN
-      recognizerRef.current = sherpa.createOnlineRecognizer({
-        modelConfig: {
-          zipformer: {
-            encoder: "/models/zipformer-de/encoder-epoch-12-avg-8.onnx", 
-            decoder: "/models/zipformer-de/decoder-epoch-12-avg-8.onnx",
-            joiner: "/models/zipformer-de/joiner-epoch-12-avg-8.onnx",
+        // 2. Setup Mic
+        const mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        if (aborted) {
+            mediaStream.getTracks().forEach(t => t.stop());
+            internalCleanup();
+            return;
+        }
+
+        const source = audioCtx.createMediaStreamSource(mediaStream);
+        const worklet = new AudioWorkletNode(audioCtx, "audio-processor");
+        workletRef.current = worklet;
+        source.connect(worklet);
+        worklet.connect(audioCtx.destination);
+
+        // 3. Setup Model Zipformer (Tiếng Việt)
+        const recognizer = sherpa.createOnlineRecognizer({
+          modelConfig: {
+            zipformer: {
+              encoder: "/models/zipformer-vi/encoder-epoch-12-avg-8.onnx",
+              decoder: "/models/zipformer-vi/decoder-epoch-12-avg-8.onnx",
+              joiner: "/models/zipformer-vi/joiner-epoch-12-avg-8.onnx",
+            },
+            tokens: "/models/zipformer-vi/tokens.txt",
+            provider: "wasm",
+            numThreads: 2,
           },
-          tokens: "/models/zipformer-de/tokens.txt",
-          provider: "wasm",
-          numThreads: 2,
-        },
-        decodingMethod: "greedy_search",
-        enableEndpoint: true,
-      });
+          decodingMethod: "greedy_search",
+          enableEndpoint: true,
+        });
 
-      const stream = recognizerRef.current.createStream();
+        recognizerRef.current = recognizer;
+        streamRef.current = recognizer.createStream();
 
-      workletRef.current.port.onmessage = (e) => {
-        const samples = e.data as Float32Array;
-        stream.acceptWaveform(16000, samples);
-        while (recognizerRef.current.isReady(stream)) {
-          recognizerRef.current.decode(stream);
+        // 4. Xử lý nhận dạng
+        worklet.port.onmessage = (e) => {
+          if (aborted) return;
+          const samples = e.data as Float32Array;
+
+          if (recognizerRef.current && streamRef.current) {
+            streamRef.current.acceptWaveform(16000, samples);
+            
+            while (recognizerRef.current.isReady(streamRef.current)) {
+              recognizerRef.current.decode(streamRef.current);
+            }
+
+            const result = recognizerRef.current.getResult(streamRef.current);
+            const text = result.text;
+
+            // 👇 QUAN TRỌNG: Sửa logic gửi Socket để khớp với useSpeechToText
+            if (text && text.length > 0 && socket?.connected) {
+                // Kiểm tra xem text có nội dung thực không (đôi khi model trả về chuỗi rỗng)
+                const textToSend = text.trim();
+                
+                if (textToSend) {
+                    socket.emit("send-subtitle", { // Đổi từ 'subtitle' -> 'send-subtitle'
+                        roomId, 
+                        text: textToSend,
+                        displayName: displayName // Đổi từ 'speaker' -> 'displayName'
+                    });
+                    
+                }
+            }
+          }
+        };
+
+        if (!aborted) {
+            setIsModelReady(true);
+            console.log("✅ Zipformer AI đã sẵn sàng và đang nghe!");
         }
-        const result = recognizerRef.current.getResult(stream);
-        if (result.text) {
-          activeSocket.emit("subtitle", { roomId, speaker: displayName, text: result.text });
+        isInitializingRef.current = false;
+
+      } catch (err) {
+        console.error("❌ Lỗi khởi tạo Zipformer:", err);
+        internalCleanup();
+      }
+    };
+
+    // Kiểm tra thư viện Sherpa đã load chưa
+    if (enabled && socket && roomId) {
+        const checkLibrary = () => {
+            if (aborted) return;
+            if (typeof window.sherpaOnnx !== "undefined") {
+                clearInterval(checkInterval);
+                start();
+            }
+        };
+
+        if (typeof window.sherpaOnnx !== "undefined") {
+            start();
+        } else {
+            console.warn("⏳ Đang đợi thư viện Sherpa load...");
+            checkInterval = setInterval(checkLibrary, 500);
         }
-      };
-    } catch (err) {
-      console.error("Lỗi khởi tạo Zipformer:", err);
+    } else {
+        internalCleanup();
     }
-  }
 
-  function cleanup() {
-    workletRef.current?.disconnect();
-    recognizerRef.current?.free?.();
-    audioCtxRef.current?.close();
-  }
+    return () => {
+      aborted = true;
+      if (checkInterval) clearInterval(checkInterval);
+      internalCleanup();
+    };
+  }, [enabled, roomId, socket, displayName]); // Thêm displayName vào deps để cập nhật tên khi đổi
+
+  return { isModelReady };
 }

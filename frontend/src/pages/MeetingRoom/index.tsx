@@ -10,6 +10,7 @@ import { useMediaStream } from '../../hooks/useMediaStream';
 import { useMeeting } from '../../hooks/useMeeting';
 import { useWebRTC } from '../../hooks/useWebRTC';
 import websocketService from '../../services/websocket.service';
+import { useZipformerVI  } from '../../hooks/useZipformerVI';
 import { useSpeechToText } from '../../hooks/useSpeechToText';
 import SubtitleOverlay from '../../components/video/SubtitleOverlay';
 // Components
@@ -50,26 +51,23 @@ const MeetingRoom: React.FC = () => {
     state.mediaDevices.localStream?.getAudioTracks()[0]?.enabled || false
   );
 
-  // Kích hoạt chức năng phụ đề cho chính mình (chỉ khi không bị mute)
   const memoizedDisplayName = useMemo(() => {
     const me = participants.find(p => p.id === myParticipantId);
     return me?.displayName || user?.fullName || 'Người dùng';
   }, [participants, myParticipantId, user]);
 
-  useSpeechToText(
+  useZipformerVI(
+  // useSpeechToText(
     webrtcSocketRef.current, 
     meeting?.roomId || null, 
     memoizedDisplayName,
     isReady && isAudioEnabled
   );
-  // --- LOGIC HÌNH NỀN ---
   useEffect(() => {
-    // Load hình nền đã lưu
     const savedBg = localStorage.getItem('meeting_background');
     if (savedBg) setBackgroundImage(savedBg);
   }, []);
 
-  // --- LOGIC AUTH & INIT ---
   useEffect(() => {
     if (!isAuthenticated || !token) {
         toast.error("Vui lòng đăng nhập");

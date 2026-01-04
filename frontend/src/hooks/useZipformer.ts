@@ -215,7 +215,7 @@ export function useZipformer(
                   const finalText = recognizerRef.current.getResult(streamRef.current).text;
                   
                   if (finalText && finalText.length > 0) {
-                      // Gửi tín hiệu chốt câu cho Server (nếu cần xử lý lưu DB)
+                    
                       if (socket && socket.connected) {
                           socket.emit("send-subtitle", { 
                               roomId, 
@@ -226,7 +226,6 @@ export function useZipformer(
                       }
                   }
 
-                  // 2. RESET STREAM ĐỂ XÓA BỘ NHỚ
                   recognizerRef.current.reset(streamRef.current);
                   lastTextRef.current = ""; // Reset biến tạm
               }

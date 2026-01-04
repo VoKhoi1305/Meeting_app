@@ -52,7 +52,6 @@ const subtitleSlice = createSlice({
   initialState,
   reducers: {
     updateSubtitle: (state, action: PayloadAction<Subtitle>) => {
-      // Cập nhật nội dung mới nhất cho peerId đó
       state.activeSubtitles[action.payload.peerId] = action.payload;
     },
     removeSubtitle: (state, action: PayloadAction<string>) => {

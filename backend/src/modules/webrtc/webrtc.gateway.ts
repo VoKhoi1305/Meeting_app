@@ -55,7 +55,6 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     if (roomId) {
       this.logger.log(`WebRTC Client disconnected: ${peerId} from room ${roomId}`);
-      // Emit sự kiện 'participant-left' để frontend useWebRTC.ts xử lý đóng PeerConnection
       client.to(roomId).emit('participant-left', { peerId });
     }
   }

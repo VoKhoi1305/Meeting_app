@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+*.onnx
+*.wasm
+sherpa-onnx.js
+tokens.txt

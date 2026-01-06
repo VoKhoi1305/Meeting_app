@@ -35,7 +35,16 @@ const Header = () => {
                     Admin Panel
                   </Link>
                 )}
-
+                  <Link 
+                to="/ai-chat" 
+                className={`px-3 py-2 rounded-md text-sm font-medium ${
+                  location.pathname === '/ai-chat' 
+                    ? 'bg-indigo-700 text-white' 
+                    : 'text-gray-300 hover:bg-indigo-700 hover:text-white'
+                }`}
+              >
+                Trợ lý AI
+              </Link>
                 <div className="flex items-center gap-2">
                   <User size={18} />
                   <span className="text-sm">{user?.fullName}</span>
@@ -60,6 +69,7 @@ const Header = () => {
                 >
                   Register
                 </Link>
+               
               </>
             )}
           </nav>

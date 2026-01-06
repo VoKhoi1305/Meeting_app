@@ -7,6 +7,8 @@ import { UsersModule } from './modules/users/users.module';
 import { MeetingsModule } from './modules/meetings/meetings.module';
 import { WebRTCModule } from './modules/webrtc/webrtc.module';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
+import { RagController } from './modules/rag/rag.controller';
+import { RagModule } from './modules/rag/rag.module';
 
 @Module({
   imports: [
@@ -33,6 +35,7 @@ import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
     UsersModule,
     MeetingsModule,
     WebRTCModule,
+    RagModule,
   ],
   providers: [
     {

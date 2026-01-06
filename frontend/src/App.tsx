@@ -16,7 +16,7 @@ import Dashboard from './pages/Dashboard';
 import AdminPanel from './pages/AdminPanel';
 import MeetingRoom from './pages/MeetingRoom';
 import JoinMeeting from './pages/MeetingRoom/JoinMeeting';
-
+import AIChatPage from './pages/AIChatPage';
 // Components
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import Loading from './components/common/Loading';
@@ -82,6 +82,16 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        <Route 
+          path="/ai-chat" 
+          element={
+            <ProtectedRoute>
+              <AIChatPage />
+            </ProtectedRoute>
+          } 
+        />
+        
       </Routes>
     </BrowserRouter>
   );

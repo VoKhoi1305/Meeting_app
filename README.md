@@ -549,7 +549,7 @@ const user = useSelector((state: RootState) => state.auth.user);
 
 ---
 
-## 🚀 Hướng Dẫn Cài Đặt
+## Hướng Dẫn Cài Đặt
 
 ### Yêu Cầu Hệ Thống
 
@@ -791,7 +791,7 @@ docker restart <container_id>
 
 ---
 
-## 📝 Ghi Chú
+## Ghi Chú
 
 - **HTTPS**: Để sử dụng camera/microphone trên production, cần HTTPS
 - **TURN Server**: Để WebRTC hoạt động qua NAT/Firewall, cần cấu hình TURN server

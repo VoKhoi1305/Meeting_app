@@ -1,6 +1,6 @@
 # Tài Liệu Hệ Thống Meeting App
 
-## 📋 Mục Lục
+## Mục Lục
 - [Giới Thiệu](#giới-thiệu)
 - [Chức Năng Chính](#chức-năng-chính)
 - [Kiến Trúc Hệ Thống](#kiến-trúc-hệ-thống)
@@ -12,7 +12,7 @@
 
 ---
 
-## 🎯 Giới Thiệu
+## Giới Thiệu
 
 **Meeting App** là một ứng dụng hội nghị trực tuyến toàn diện, được xây dựng với kiến trúc **Full-stack TypeScript**, kết hợp công nghệ **WebRTC** cho video call và **AI/RAG** cho trợ lý thông minh.
 
@@ -25,7 +25,7 @@
 
 ---
 
-## ✨ Chức Năng Chính
+## Chức Năng Chính
 
 ### 1. **Xác Thực & Quản Lý Người Dùng**
 - Đăng ký và đăng nhập tài khoản
@@ -68,7 +68,7 @@
 
 ---
 
-## 🏗️ Kiến Trúc Hệ Thống
+## Kiến Trúc Hệ Thống
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -133,7 +133,7 @@
 
 ---
 
-## 📁 Cấu Trúc Thư Mục
+## Cấu Trúc Thư Mục
 
 ### Backend Structure
 
@@ -670,7 +670,7 @@ VITE_WS_URL=http://localhost:3000
 
 ---
 
-## ▶️ Hướng Dẫn Chạy Ứng Dụng
+## Hướng Dẫn Chạy Ứng Dụng
 
 ### Chạy Services Bên Ngoài
 
@@ -800,7 +800,7 @@ docker restart <container_id>
 
 ---
 
-## 🔗 Tài Liệu Tham Khảo
+## Tài Liệu Tham Khảo
 
 - [NestJS Documentation](https://docs.nestjs.com/)
 - [React Documentation](https://react.dev/)

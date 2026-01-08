@@ -329,7 +329,7 @@ frontend/
 
 ---
 
-## 📚 Kiến Thức Liên Quan
+## Kiến Thức Liên Quan
 
 ### 1. **WebRTC (Web Real-Time Communication)**
 

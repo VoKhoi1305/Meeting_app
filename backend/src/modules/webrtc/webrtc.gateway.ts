@@ -47,10 +47,8 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  // --- SỬA ĐỔI: Báo cho frontend đóng kết nối peer khi mất socket ---
   handleDisconnect(client: Socket) {
     const { roomId } = client.data;
-    // WebRTC dùng client.id làm peerId
     const peerId = client.id; 
 
     if (roomId) {
@@ -71,9 +69,8 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     const { roomId } = data;
     
-    // --- LƯU LẠI ROOM ID ---
+    // save roomId to client data for future reference
     client.data.roomId = roomId;
-    // -----------------------
 
     client.join(roomId);
 
@@ -130,7 +127,7 @@ export class WebRTCGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() data: { roomId: string; text: string },
   ) {
     const { roomId, text } = data;
-    // Gửi cho tất cả người khác, kèm theo ID của người nói
+// Broadcast the subtitle to other participants in the room
     client.to(roomId).emit('new-subtitle', {
       peerId: client.id,
       text: text,

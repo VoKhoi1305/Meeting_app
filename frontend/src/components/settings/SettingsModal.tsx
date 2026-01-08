@@ -4,10 +4,8 @@ import { X, Image as ImageIcon, Upload, User, Save, Trash2 } from 'lucide-react'
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  // Props cho đổi tên
   currentName: string;
   onSaveName: (newName: string) => void;
-  // Props cho hình nền
   currentBackground: string | null;
   onBackgroundChange: (image: string | null) => void;
 }
@@ -36,7 +34,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       reader.onloadend = () => {
         const result = reader.result as string;
         onBackgroundChange(result);
-        localStorage.setItem('meeting_background', result); // Lưu vào browser
+        localStorage.setItem('meeting_background', result); // store in localStorage
       };
       reader.readAsDataURL(file);
     }
@@ -59,7 +57,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         <div className="flex items-center justify-between border-b border-gray-700 p-5 bg-gray-800">
           <h2 className="text-xl font-bold text-white flex items-center gap-2">
             <SettingsIcon className="h-5 w-5 text-blue-500" />
-            Cài đặt phòng họp
+            meeting Settings
           </h2>
           <button onClick={onClose} className="rounded-full p-2 hover:bg-gray-700 text-gray-400 hover:text-white transition">
             <X size={20} />
@@ -69,9 +67,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         {/* Body */}
         <div className="p-6 space-y-8">
           
-          {/* Section 1: Đổi tên */}
+          {/* Display Name */}
           <div className="space-y-3">
-            <label className="text-sm font-semibold text-gray-300 uppercase tracking-wider">Tên hiển thị</label>
+            <label className="text-sm font-semibold text-gray-300 uppercase tracking-wider">Display Name</label>
             <div className="flex gap-3">
               <div className="relative flex-1">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -82,27 +80,27 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   value={nameInput}
                   onChange={(e) => setNameInput(e.target.value)}
                   className="w-full bg-gray-950 border border-gray-700 text-white rounded-lg pl-10 pr-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-                  placeholder="Nhập tên của bạn..."
+                  placeholder="Enter your name..."
                 />
               </div>
               <button 
                 onClick={handleSaveNameClick}
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition flex items-center gap-2"
               >
-                <Save size={16} /> Lưu
+                <Save size={16} /> Save
               </button>
             </div>
           </div>
 
           <div className="h-px bg-gray-800 w-full"></div>
 
-          {/* Section 2: Hình nền */}
+          {/*Meeting Background */}
           <div className="space-y-3">
             <label className="text-sm font-semibold text-gray-300 uppercase tracking-wider flex justify-between">
-              <span>Hình nền phòng</span>
+              <span>Meeting Background</span>
               {currentBackground && (
                 <button onClick={clearBackground} className="text-red-400 hover:text-red-300 text-xs flex items-center gap-1 transition">
-                  <Trash2 size={12} /> Xóa ảnh nền
+                  <Trash2 size={12} /> Remove background
                 </button>
               )}
             </label>
@@ -117,13 +115,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   <>
                     <img src={currentBackground} alt="Preview" className="h-full w-full object-cover" />
                     <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                      <span className="text-white text-xs font-medium">Thay đổi</span>
+                      <span className="text-white text-xs font-medium">Change</span>
                     </div>
                   </>
                 ) : (
                   <div className="h-full flex flex-col items-center justify-center text-gray-400">
                     <ImageIcon className="h-8 w-8 mb-2 opacity-50" />
-                    <span className="text-xs">Chưa có ảnh nền</span>
+                    <span className="text-xs">No background image</span>
                   </div>
                 )}
               </div>
@@ -141,10 +139,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   onClick={() => fileInputRef.current?.click()}
                   className="w-full py-2.5 border border-gray-600 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition flex items-center justify-center gap-2 text-sm font-medium"
                 >
-                  <Upload size={16} /> Tải ảnh lên
+                  <Upload size={16} /> Upload Image
                 </button>
                 <p className="text-[10px] text-gray-500 text-center">
-                  Hỗ trợ JPG, PNG. Khuyên dùng 1920x1080.
+                  Supports JPG, PNG. Recommended 1920x1080.
                 </p>
               </div>
             </div>

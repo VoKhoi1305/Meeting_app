@@ -8,11 +8,10 @@ let pdfjsLib: any;
 try {
   pdfjsLib = require('pdfjs-dist/legacy/build/pdf.js');
 } catch (error) {
-  // Fallback nếu không tìm thấy path legacy
   try {
     pdfjsLib = require('pdfjs-dist/build/pdf.js');
   } catch (e) {
-    console.error('❌ Không tìm thấy thư viện pdfjs-dist. Vui lòng chạy: npm install pdfjs-dist@2.16.105');
+    console.error('Failed to load pdfjs-dist library:', e);
   }
 }
 
@@ -35,7 +34,7 @@ export class RagService {
   async processPdf(buffer: Buffer, filename: string, userId: string, sessionId?: string) {
     try {
       if (!pdfjsLib) {
-        throw new Error("loi thu vien");
+        throw new Error("lib erorr");
       }
 
       const sessionLabel = sessionId || 'General';
@@ -55,7 +54,7 @@ export class RagService {
       }
 
       if (!fullText || fullText.trim().length === 0) {
-        throw new Error('File PDF không có nội dung text.');
+        throw new Error('PDF file does not contain any text.');
       }
 
       const splitter = new RecursiveCharacterTextSplitter({
@@ -81,7 +80,7 @@ export class RagService {
         url: "http://localhost:8000",
       });
       
-      this.logger.log(`✅ Đã lưu ${docsWithMetadata.length} vectors cho User: ${userId}`);
+      // this.logger.log(` Đã lưu ${docsWithMetadata.length} vectors cho User: ${userId}`);
       
       return { 
         message: "Xử lý thành công", 
@@ -90,8 +89,7 @@ export class RagService {
       };
 
     } catch (error) {
-      this.logger.error(`❌ LỖI UPLOAD: ${error.message}`, error.stack);
-      throw new InternalServerErrorException(`Lỗi xử lý file: ${error.message}`);
+      throw new InternalServerErrorException(`file erorr: ${error.message}`);
     }
   }
 
@@ -116,7 +114,7 @@ export class RagService {
       
       if (!results || results.length === 0) {
         return { 
-          answer: "Dựa trên tài liệu bạn tải lên, tôi không tìm thấy thông tin phù hợp.",
+          answer: "I can't find relevant information in the documents.",
           sources: []
         };
       }
@@ -125,19 +123,24 @@ export class RagService {
       const sources = [...new Set(results.map(doc => doc.metadata.source))];
 
       const prompt = `
-      Bạn là một trợ lý AI hỗ trợ tra cứu tài liệu.
-          Dựa vào ngữ cảnh (Context) dưới đây, hãy trả lời câu hỏi của người dùng bằng tiếng Việt.
-        
-          Quy tắc quan trọng:
-         - Chỉ dùng thông tin trong Context.
-         - Nếu Context không có câu trả lời, hãy nói "Tôi không tìm thấy thông tin trong tài liệu".
-         - Trình bày rõ ràng, dễ hiểu.
+    ### SYSTEM ROLE
+    You are a trusted document analysis assistant. Your goal is to provide accurate answers based EXCLUSIVELY on the provided documents.
 
-         [CONTEXT]:
-          ${context}
-          [USER QUESTION]:
-         ${question}
-         [ANSWER]:
+    ### INSTRUCTIONS
+    1. Analyze the provided [Context] carefully.
+    2. Answer the [User Question] using only the information from the [Context].
+    3. Hallucination Check: If the context does not contain the answer, you MUST respond with: "I cannot find the information in the provided documents." Do NOT use your internal knowledge base or make assumptions.
+    4. Be concise and clear in your response.
+    5. **Language:** Provide the final answer in English.
+
+    ### DATA
+    [Context]:
+    ${context}
+
+    [User Question]:
+    ${question}
+
+    ### RESPONSE
        `;
 
 
@@ -149,8 +152,8 @@ export class RagService {
       };
 
     } catch (error) {
-      this.logger.error("Lỗi Chat:", error);
-      return { answer: "Xin lỗi, hệ thống đang gặp sự cố khi trích xuất dữ liệu." };
+      // this.logger.error("Lỗi Chat:", error);
+      return { answer: "system error when answer" };
     }
   }
   async checkDatabaseStats() {
@@ -165,7 +168,7 @@ export class RagService {
       if (!collection) {
         return { 
           status: "Warning", 
-          message: "Chưa kết nối được Collection (có thể chưa có dữ liệu nào)." 
+          message: "cannot connect to collection." 
         };
       }
 

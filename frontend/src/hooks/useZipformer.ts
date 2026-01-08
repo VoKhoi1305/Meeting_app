@@ -36,7 +36,7 @@ export function useZipformer(
     isInitializingRef.current = true;
     let aborted = false;
 
-    // --- HÀM DỌN DẸP ---
+    // --- CLEANUP FUNCTION ---
     const cleanup = () => {
       if (workletRef.current) {
         workletRef.current.port.onmessage = null;
@@ -76,14 +76,14 @@ export function useZipformer(
             const script = document.createElement('script');
             script.src = "/lib/sherpa-onnx.js";
             script.async = true;
-            script.onerror = () => reject(new Error("Lỗi tải script sherpa-onnx.js"));
+            script.onerror = () => reject(new Error("Failed to load Sherpa ONNX script"));
             document.body.appendChild(script);
         });
     };
 
     const initSherpa = async () => {
       try {
-        setStatusText("⏳ Đang tải thư viện...");
+        setStatusText("model loading");
         await loadScriptAndInitWasm();
         if (aborted) return;
         
@@ -96,12 +96,12 @@ export function useZipformer(
              if (SherpaModule.FS.analyzePath("/" + filename).exists) return;
            } catch(e) {}
            const res = await fetch(url);
-           if (!res.ok) throw new Error(`Lỗi tải ${url}`);
+           if (!res.ok) throw new Error(`download error ${url}`);
            const buffer = await res.arrayBuffer();
            SherpaModule.FS_createDataFile("/", filename, new Uint8Array(buffer), true, false, true);
         };
 
-        setStatusText("📦 Đang tải Models...");
+        setStatusText("model loading...");
         await Promise.all([
           mountFile("/models/zipformer-en/encoder.onnx", "encoder.onnx"),
           mountFile("/models/zipformer-en/decoder.onnx", "decoder.onnx"),
@@ -109,9 +109,8 @@ export function useZipformer(
           mountFile("/models/zipformer-en/tokens.txt", "tokens.txt"),
         ]);
 
-        setStatusText("⚙️ Đang cấu hình...");
+        setStatusText("configuring model...");
 
-        // --- CẤU HÌNH NGẮT CÂU (QUAN TRỌNG) ---
         const config = {
           featConfig: {
             sampleRate: 16000,
@@ -132,10 +131,10 @@ export function useZipformer(
           decodingMethod: "greedy_search",
           enableEndpoint: 1, // Bật tính năng phát hiện điểm cuối
           
-          // Rule 1: Nếu im lặng trong 2.0 giây sau khi đã nói gì đó -> Ngắt câu
+          //Nếu im lặng trong 2.0 giây sau khi đã nói gì đó -> Ngắt câu
           rule1MinTrailingSilence: 2.0, 
           
-          // Rule 2: Nếu im lặng trong 1.2 giây (dự phòng cho câu ngắn) -> Ngắt
+          //Nếu im lặng trong 1.2 giây (dự phòng cho câu ngắn) -> Ngắt
           rule2MinTrailingSilence: 1.2, 
           
           // Rule 3: Nếu câu dài quá 20s mà chưa ngắt -> Bắt buộc ngắt
@@ -146,7 +145,6 @@ export function useZipformer(
              recognizerRef.current = new OnlineRecognizer(config, SherpaModule);
         }
         
-        // --- AUDIO SETUP ---
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         const audioCtx = new AudioContext({ sampleRate: 16000 });
         audioCtxRef.current = audioCtx;
@@ -165,16 +163,14 @@ export function useZipformer(
         source.connect(worklet);
         worklet.connect(audioCtx.destination);
 
-        // Tạo Stream mới
         if (streamRef.current) {
             try { streamRef.current.free(); } catch {}
         }
         streamRef.current = recognizerRef.current.createStream();
         
         setIsModelReady(true);
-        setStatusText("🟢 Đang nghe...");
+        setStatusText("listening");
 
-        // --- XỬ LÝ KẾT QUẢ ---
         worklet.port.onmessage = (event) => {
            if (aborted) return;
            const float32Audio = event.data;
@@ -182,36 +178,30 @@ export function useZipformer(
            if (recognizerRef.current && streamRef.current) {
               streamRef.current.acceptWaveform(16000, float32Audio);
               
-              // Decode liên tục
               while (recognizerRef.current.isReady(streamRef.current)) {
                  recognizerRef.current.decode(streamRef.current);
               }
 
-              // Lấy text hiện tại
               const result = recognizerRef.current.getResult(streamRef.current);
               const text = result.text;
 
               if (text && text.length > 0) {
                  const textToSend = text.trim();
                  
-                 // Gửi text realtime (để hiển thị chữ đang chạy)
                  if (textToSend !== lastTextRef.current) {
                     if (socket && socket.connected) {
                        socket.emit("send-subtitle", { 
                            roomId, 
                            text: textToSend, 
                            displayName,
-                           isFinal: false // Đánh dấu là chưa chốt câu
+                           isFinal: false 
                        });
                     }
                     lastTextRef.current = textToSend;
                  }
               }
-
-              // --- LOGIC NGẮT CÂU (QUAN TRỌNG) ---
+              // check endpoint
               if (recognizerRef.current.isEndpoint(streamRef.current)) {
-                  
-                  // 1. Lấy toàn bộ câu chốt hạ
                   const finalText = recognizerRef.current.getResult(streamRef.current).text;
                   
                   if (finalText && finalText.length > 0) {
@@ -221,19 +211,19 @@ export function useZipformer(
                               roomId, 
                               text: finalText, 
                               displayName,
-                              isFinal: true // Đánh dấu đây là câu hoàn chỉnh
+                              isFinal: true 
                           });
                       }
                   }
 
                   recognizerRef.current.reset(streamRef.current);
-                  lastTextRef.current = ""; // Reset biến tạm
+                  lastTextRef.current = ""; 
               }
            }
         };
 
       } catch (err: any) {
-        console.error("❌ [Zipformer Error]:", err);
+        console.error("[Zipformer Error]:", err);
         setStatusText("Lỗi: " + err.message);
         cleanup();
       }

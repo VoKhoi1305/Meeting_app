@@ -3,19 +3,18 @@ import authReducer from './slices/authSlice';
 import meetingReducer from './slices/meetingSlice';
 import participantsReducer from './slices/participantsSlice';
 import mediaDevicesReducer from './slices/mediaDevicesSlice';
-import subtitleReducer from './slices/subtitleSlice'; // Thêm mới
+import subtitleReducer from './slices/subtitleSlice'; 
 export const store = configureStore({
   reducer: {
     auth: authReducer,
     meeting: meetingReducer,
     participants: participantsReducer,
     mediaDevices: mediaDevicesReducer,
-    subtitles: subtitleReducer, // Thêm mới
+    subtitles: subtitleReducer, 
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
       serializableCheck: {
-        // Ignore MediaStream objects in Redux
         ignoredActions: [
           'mediaDevices/setLocalStream',
           'participants/setParticipantStream',

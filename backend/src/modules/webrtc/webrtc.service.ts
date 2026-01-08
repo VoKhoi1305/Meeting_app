@@ -1,4 +1,3 @@
-// src/modules/webrtc/webrtc.service.ts
 import { Injectable } from '@nestjs/common';
 import { webrtcConfig } from '../../config/webrtc.config';
 

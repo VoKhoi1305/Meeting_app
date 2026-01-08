@@ -46,7 +46,7 @@ const MeetingRoom: React.FC = () => {
 
   const memoizedDisplayName = useMemo(() => {
     const me = participants.find(p => p.id === myParticipantId);
-    return me?.displayName || user?.fullName || 'Người dùng';
+    return me?.displayName || user?.fullName || 'User';
   }, [participants, myParticipantId, user]);
 
   const { isModelReady } = useZipformer(
@@ -94,7 +94,7 @@ const MeetingRoom: React.FC = () => {
 
   useEffect(() => {
     if (!isAuthenticated || !token) {
-        toast.error("Vui lòng đăng nhập");
+        toast.error("please login to continue");
         navigate('/login');
     }
   }, [isAuthenticated, token, navigate]);
@@ -151,7 +151,7 @@ const MeetingRoom: React.FC = () => {
       } catch (error) {
         if (!cancelled) {
             console.error(error);
-            toast.error('Lỗi khi tham gia');
+            toast.error('Error joining meeting');
         }
       }
     };
@@ -172,20 +172,20 @@ const MeetingRoom: React.FC = () => {
   const handleCopyCode = () => {
     if (meeting) {
       navigator.clipboard.writeText(meeting.roomCode);
-      toast.success('Đã sao chép mã phòng');
+      toast.success('encopied room code to clipboard');
     }
   };
 
   const handleSaveName = (newName: string) => {
-    if (!newName.trim()) return toast.error('Tên không hợp lệ');
+    if (!newName.trim()) return toast.error('Name cannot be empty');
     
     if (changeDisplayName) changeDisplayName(newName);
     
     if (myParticipantId) {
       dispatch(updateParticipant({ id: myParticipantId, updates: { displayName: newName } }));
     }
-    
-    toast.success('Đã đổi tên');
+
+    toast.success('Name changed successfully');
     setShowSettings(false);
   };
 
@@ -200,7 +200,7 @@ const MeetingRoom: React.FC = () => {
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-gray-950 font-sans">
       
-      {/* 1. BACKGROUND LAYER */}
+      {/*BACKGROUND LAYER */}
       {backgroundImage && (
         <div className="absolute inset-0 z-0">
           <img src={backgroundImage} alt="Room Background" className="h-full w-full object-cover animate-in fade-in duration-700" />
@@ -208,7 +208,7 @@ const MeetingRoom: React.FC = () => {
         </div>
       )}
 
-      {/* 2. CONTENT LAYER */}
+      {/*CONTENT LAYER */}
       <div className="relative z-10 flex h-full flex-col">
         
         {/* Header */}
@@ -229,12 +229,12 @@ const MeetingRoom: React.FC = () => {
                 ${showParticipants ? 'bg-blue-600 text-white' : 'bg-gray-900/60 text-gray-300 hover:bg-gray-800'}`}
             >
               <Users size={18} />
-              <span className="hidden sm:inline">Mọi người ({participants.length})</span>
+              <span className="hidden sm:inline">Participants ({participants.length})</span>
             </button>
           </div>
         </div>
 
-        {/* --- HIỂN THỊ PHỤ ĐỀ --- */}
+        {/* Subtitle Overlay */}
         <SubtitleOverlay />
 
         {/* Main Area */}
@@ -247,7 +247,7 @@ const MeetingRoom: React.FC = () => {
             ) : (
                <div className="flex h-full flex-col items-center justify-center text-gray-400 gap-4">
                  <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                 <p>Đang kết nối tới Camera...</p>
+                 <p>Connecting to Camera...</p>
                </div>
             )}
           </div>
@@ -264,7 +264,7 @@ const MeetingRoom: React.FC = () => {
         <MeetingControls onOpenSettings={() => setShowSettings(true)} />
       </div>
 
-      {/* 3. MODAL LAYER */}
+      {/* MODAL LAYER */}
       <SettingsModal 
         isOpen={showSettings}
         onClose={() => setShowSettings(false)}

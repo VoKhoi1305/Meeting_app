@@ -43,7 +43,7 @@ const Header = () => {
                     : 'text-gray-300 hover:bg-indigo-700 hover:text-white'
                 }`}
               >
-                Trợ lý AI
+                AI chat
               </Link>
                 <div className="flex items-center gap-2">
                   <User size={18} />

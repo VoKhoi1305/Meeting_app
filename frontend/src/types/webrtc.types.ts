@@ -11,7 +11,6 @@ export interface SerializableDeviceInfo {
   groupId: string;
 }
 
-// ✅ Cập nhật State cũ để dùng interface mới
 export interface MediaDevicesState {
   audioDevices: SerializableDeviceInfo[]; 
   videoDevices: SerializableDeviceInfo[]; 

@@ -142,7 +142,7 @@ export class MeetingsGateway implements OnGatewayConnection, OnGatewayDisconnect
     const { roomId } = data;
     this.logger.log(`Meeting ended event received for room: ${roomId}`);
     this.server.to(roomId).emit('meeting-ended', {
-      message: 'Cuộc họp đã được kết thúc bởi chủ phòng.',
+      message: 'The meeting has been ended by the host.',
     });
   }
 

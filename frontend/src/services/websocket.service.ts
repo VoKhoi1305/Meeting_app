@@ -16,7 +16,6 @@ class WebSocketService {
   private webrtcSocket: Socket | null = null;
 
   connectMeetings(): Socket {
-    // Nếu socket đã tồn tại, kiểm tra xem nó có đang mở không
     if (this.meetingsSocket) {
         if (!this.meetingsSocket.connected) {
             this.meetingsSocket.connect();
@@ -29,7 +28,7 @@ class WebSocketService {
 
     this.meetingsSocket = io(`${BASE_URL}/meetings`, {
       auth: { token },
-      transports: ['polling', 'websocket'], // Quan trọng để tránh lỗi đóng kết nối
+      transports: ['polling', 'websocket'], 
       path: '/socket.io',
       reconnection: true,
       reconnectionAttempts: 10,
